@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="uz">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CareTrack Clinic - Kirish sahifasi">
+  <title>Kirish — CareTrack Clinic</title>
+
+  <!-- Tailwind CSS v4 CDN -->
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/css/style.css">
+
+  <!-- Tailwind Theme Configurations -->
+  <style type="text/tailwindcss">
+    @theme {
+      --color-gold-primary: var(--gold-primary);
+      --color-gold-secondary: var(--gold-secondary);
+      --color-gold-bg: var(--gold-bg);
+      --color-gold-badge-bg: var(--gold-badge-bg);
+      --color-gold-badge-text: var(--gold-badge-text);
+      
+      --color-bg-page: var(--bg-page);
+      --color-bg-sidebar: var(--bg-sidebar);
+      --color-bg-card: var(--bg-card);
+      --color-bg-card-hover: var(--bg-card-hover);
+      --color-border-main: var(--border-main);
+      --color-text-main: var(--text-main);
+      --color-text-muted: var(--text-muted);
+    }
+  </style>
+
+  <!-- Anti-flicker Theme Initializer -->
+  <script>
+    (function () {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body
+  class="bg-bg-page text-text-main min-h-screen flex items-center justify-center p-4 selection:bg-gold-primary selection:text-white relative overflow-hidden transition-colors duration-300">
+  <!-- Decorative background glows -->
+  <div
+    class="absolute w-96 h-96 rounded-full bg-gold-primary/5 blur-[120px] top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2">
+  </div>
+  <div
+    class="absolute w-96 h-96 rounded-full bg-gold-secondary/5 blur-[120px] bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2">
+  </div>
+
+  <!-- Top theme switcher for login page -->
+  <div class="absolute top-6 right-6">
+    <button id="themeToggle"
+      class="w-10 h-10 rounded-xl bg-bg-card border border-border-main hover:border-gold-primary/40 flex items-center justify-center text-lg hover:scale-105 active:scale-95 transition-all cursor-pointer"
+      title="Mavzuni o'zgartirish">
+      <i data-lucide="moon"></i>
+    </button>
+  </div>
+
+  <div
+    class="w-full max-w-md bg-bg-card/70 border border-gold-primary/10 backdrop-blur-xl shadow-xl shadow-gold-primary/2 rounded-2xl p-8 relative z-10 glow-card transition-all duration-300">
+    <div class="text-center mb-8">
+      <div
+        class="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-gold-primary to-gold-secondary items-center justify-center text-3xl shadow-lg shadow-gold-primary/10 mb-4">
+        <i data-lucide="hospital"></i>
+      </div>
+      <h1 class="text-2xl font-extrabold text-shiny-gold tracking-wide">CareTrack Clinic</h1>
+      <p class="text-xs text-text-muted mt-1 font-medium uppercase tracking-wider">Tibbiy Yozuvlarni Boshqarish Tizimi
+      </p>
+    </div>
+
+    <!-- Alert notifications -->
+    <% if (typeof error !=='undefined' && error) { %>
+      <div
+        class="alert bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl flex items-center gap-2 mb-6 text-sm">
+        <span><i data-lucide="x-circle" class="w-5 h-5"></i></span>
+        <%= error %>
+      </div>
+      <% } %>
+        <% if (typeof success !=='undefined' && success) { %>
+          <div
+            class="alert bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-3 rounded-xl flex items-center gap-2 mb-6 text-sm">
+            <span><i data-lucide="check-circle" class="w-5 h-5"></i></span>
+            <%= success %>
+          </div>
+          <% } %>
+
+            <form method="POST" action="/login" class="space-y-5">
+              <div>
+                <label for="username"
+                  class="text-xs uppercase tracking-wider text-text-muted font-bold mb-2 block">Foydalanuvchi
+                  nomi</label>
+                <input type="text" id="username" name="username"
+                  class="w-full bg-bg-page border border-border-main rounded-xl px-4 py-3 text-text-main placeholder-text-muted focus:outline-none focus:border-gold-primary focus:ring-1 focus:ring-gold-primary transition-all text-sm"
+                  placeholder="Foydalanuvchi nomini kiriting" required autofocus>
+              </div>
+
+              <div>
+                <label for="password"
+                  class="text-xs uppercase tracking-wider text-text-muted font-bold mb-2 block">Parol</label>
+                <input type="password" id="password" name="password"
+                  class="w-full bg-bg-page border border-border-main rounded-xl px-4 py-3 text-text-main placeholder-text-muted focus:outline-none focus:border-gold-primary focus:ring-1 focus:ring-gold-primary transition-all text-sm"
+                  placeholder="Parolni kiriting" required>
+              </div>
+
+              <button type="submit"
+                class="w-full py-3.5 bg-gradient-to-r from-gold-primary to-gold-secondary text-white dark:text-black font-bold rounded-xl shadow-md shadow-gold-primary/10 hover:shadow-lg hover:shadow-gold-primary/20 cursor-pointer flex items-center justify-center gap-2 btn-premium text-sm">
+                <i data-lucide="lock" class="w-4 h-4"></i> Tizimga kirish
+              </button>
+            </form>
+
+            <div class="mt-8 pt-6 border-t border-border-main">
+              <h4 class="text-xs uppercase tracking-wider text-gold-primary font-extrabold mb-3">Test login ma'lumotlari
+              </h4>
+              <div class="space-y-2 text-xs">
+                <div class="flex justify-between items-center py-1 border-b border-border-main/40">
+                  <span class="text-text-muted">Admin (To'liq CRUD):</span>
+                  <code
+                    class="text-text-main font-mono bg-bg-page px-2 py-0.5 rounded border border-border-main">admin / admin123</code>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-border-main/40">
+                  <span class="text-text-muted">Klinitsist (Bemor + Tashxis):</span>
+                  <code
+                    class="text-text-main font-mono bg-bg-page px-2 py-0.5 rounded border border-border-main">doctor1 / doctor123</code>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                  <span class="text-text-muted">Qabulxona (Bemor qo'shish):</span>
+                  <code
+                    class="text-text-main font-mono bg-bg-page px-2 py-0.5 rounded border border-border-main">reception1 / recep123</code>
+                </div>
+              </div>
+            </div>
+  </div>
+
+  <script src="/js/main.js"></script>
+</body>
+
+</html>

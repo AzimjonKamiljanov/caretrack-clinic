@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CareTrack Clinic - Tibbiy Yozuvlarni Boshqarish Tizimi">
+  <title><%= title %> — CareTrack Clinic</title>
+  
+  <!-- Tailwind CSS v4 CDN -->
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/premium.css">
+  
+  <!-- Tailwind Theme Configuration using CSS variables -->
+  <style type="text/tailwindcss">
+    @theme {
+      --color-gold-primary: var(--gold-primary);
+      --color-gold-secondary: var(--gold-secondary);
+      --color-gold-bg: var(--gold-bg);
+      --color-gold-badge-bg: var(--gold-badge-bg);
+      --color-gold-badge-text: var(--gold-badge-text);
+      
+      --color-bg-page: var(--bg-page);
+      --color-bg-sidebar: var(--bg-sidebar);
+      --color-bg-card: var(--bg-card);
+      --color-bg-card-hover: var(--bg-card-hover);
+      --color-border-main: var(--border-main);
+      --color-text-main: var(--text-main);
+      --color-text-muted: var(--text-muted);
+    }
+  </style>
+
+  <!-- Anti-flicker Theme Initializer -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- ApexCharts -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body class="bg-bg-page text-text-main min-h-screen selection:bg-gold-primary selection:text-white transition-colors duration-300">
+  <!-- Mesh Gradient Background -->
+  <div class="mesh-bg-container">
+    <div class="mesh-blob blob-1"></div>
+    <div class="mesh-blob blob-2"></div>
+    <div class="mesh-blob blob-3"></div>
+  </div>
+<% if (user) { %>
+<div class="flex min-h-screen relative z-10">
+  <!-- Sidebar Overlay for mobile -->
+  <div class="sidebar-overlay lg:hidden"></div>
+  
+  <!-- Sidebar -->
+  <aside class="sidebar fixed top-0 bottom-0 left-0 z-40 w-64 glass-panel border-r border-border-main flex flex-col justify-between -translate-x-full lg:translate-x-0 transition-transform duration-300">
+    <div>
+      <!-- Brand -->
+      <div class="flex items-center gap-3 px-6 py-6 border-b border-border-main">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-primary to-gold-secondary flex items-center justify-center text-xl shadow-lg shadow-gold-primary/10">
+          <i data-lucide="hospital"></i>
+        </div>
+        <div>
+          <h2 class="text-lg font-bold text-shiny-gold tracking-wide">CareTrack</h2>
+          <span class="text-xs text-text-muted uppercase tracking-widest font-semibold">Klinika Tizimi</span>
+        </div>
+      </div>
+      
+      <!-- Nav Links -->
+      <nav class="sidebar-nav px-4 py-6 space-y-1">
+        <div class="text-xs font-bold text-text-muted/60 px-3 mb-2 uppercase tracking-widest">Asosiy</div>
+        <a href="/dashboard" class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-muted hover:text-gold-primary hover:bg-bg-card-hover transition-all duration-200 group">
+          <span class="text-lg group-hover:scale-115 transition-transform"><i data-lucide="layout-dashboard"></i></span> 
+          <span class="font-bold text-sm">Boshqaruv Paneli</span>
+        </a>
+        
+        <div class="text-xs font-bold text-text-muted/60 px-3 pt-6 mb-2 uppercase tracking-widest">Boshqaruv</div>
+        <a href="/doctors" class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-muted hover:text-gold-primary hover:bg-bg-card-hover transition-all duration-200 group">
+          <span class="text-lg group-hover:scale-115 transition-transform"><i data-lucide="stethoscope"></i></span> 
+          <span class="font-bold text-sm">Shifokorlar</span>
+        </a>
+        <a href="/patients" class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-muted hover:text-gold-primary hover:bg-bg-card-hover transition-all duration-200 group">
+          <span class="text-lg group-hover:scale-115 transition-transform"><i data-lucide="users"></i></span> 
+          <span class="font-bold text-sm">Bemorlar</span>
+        </a>
+        <a href="/illnesses" class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-muted hover:text-gold-primary hover:bg-bg-card-hover transition-all duration-200 group">
+          <span class="text-lg group-hover:scale-115 transition-transform"><i data-lucide="clipboard-list"></i></span> 
+          <span class="font-bold text-sm">Kasalliklar</span>
+        </a>
+        
+        <% if (user.role === 'admin') { %>
+        <div class="text-xs font-bold text-text-muted/60 px-3 pt-6 mb-2 uppercase tracking-widest">Sozlamalar</div>
+        <a href="/users" class="flex items-center gap-3 px-4 py-3 rounded-xl text-text-muted hover:text-gold-primary hover:bg-bg-card-hover transition-all duration-200 group">
+          <span class="text-lg group-hover:scale-115 transition-transform"><i data-lucide="users"></i></span> 
+          <span class="font-bold text-sm">Foydalanuvchilar</span>
+        </a>
+        <% } %>
+      </nav>
+    </div>
+    
+    <!-- User Info and Logout -->
+    <div class="p-4 border-t border-border-main bg-bg-page/40">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-primary to-gold-secondary flex items-center justify-center text-white dark:text-black font-extrabold uppercase shadow-md shadow-gold-primary/10">
+          <%= user.full_name.charAt(0) %>
+        </div>
+        <div class="min-w-0">
+          <h4 class="text-sm font-bold text-text-main truncate"><%= user.full_name %></h4>
+          <span class="text-xs text-gold-primary font-bold"><%= user.role === 'admin' ? 'Administrator' : user.role === 'clinician' ? 'Klinitsist' : 'Qabulxona' %></span>
+        </div>
+      </div>
+      <a href="/logout" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-500/20 text-red-500 hover:bg-red-500 hover:text-white transition-all duration-200 text-xs font-bold btn-premium">
+        <i data-lucide="log-out" class="w-4 h-4"></i> Chiqish
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content Layout -->
+  <div class="flex-1 lg:pl-64 flex flex-col min-h-screen">
+    <!-- Topbar -->
+    <header class="h-16 border-b border-border-main glass-panel px-6 flex items-center justify-between sticky top-0 z-30 transition-colors duration-300">
+      <div class="flex items-center gap-4">
+        <button class="mobile-toggle lg:hidden text-2xl text-gold-primary hover:text-gold-secondary focus:outline-none cursor-pointer">
+          <i data-lucide="menu"></i>
+        </button>
+        <h2 class="text-base font-extrabold text-text-main"><%= title %></h2>
+      </div>
+      
+      <div class="flex items-center gap-4">
+        <!-- Theme Toggle Button -->
+        <button id="themeToggle" class="w-10 h-10 rounded-xl bg-bg-page border border-border-main hover:border-gold-primary/40 flex items-center justify-center text-lg hover:scale-105 active:scale-95 transition-all cursor-pointer" title="Mavzuni o'zgartirish">
+          <i data-lucide="moon"></i>
+        </button>
+        <div class="text-xs text-text-muted hidden sm:block">
+          Tizim: <span class="text-gold-primary font-bold">CareTrack v1.0</span>
+        </div>
+      </div>
+    </header>
+    
+    <!-- Content Area -->
+    <main class="flex-1 p-6 md:p-8 space-y-6">
+      <!-- Flash Messages -->
+      <% if (success) { %>
+        <div class="alert bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-3.5 rounded-2xl flex items-center gap-2 shadow-sm transition-all duration-300">
+          <span><i data-lucide="check-circle" class="w-5 h-5"></i></span> <%= success %>
+        </div>
+      <% } %>
+      <% if (error) { %>
+        <div class="alert bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 px-4 py-3.5 rounded-2xl flex items-center gap-2 shadow-sm transition-all duration-300">
+          <span><i data-lucide="x-circle" class="w-5 h-5"></i></span> <%= error %>
+        </div>
+      <% } %>
+<% } %>

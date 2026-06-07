@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="CareTrack Clinic - Tibbiyot muassasalarini boshqarish uchun eng qulay tizim">
+  <title>CareTrack Clinic — Bosh sahifa</title>
+  
+  <!-- Tailwind CSS v4 CDN -->
+  <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+  
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <!-- Tailwind Theme Configurations -->
+  <style type="text/theme">
+    @theme {
+      --color-gold-primary: var(--gold-primary);
+      --color-gold-secondary: var(--gold-secondary);
+      --color-gold-bg: var(--gold-bg);
+      --color-gold-badge-bg: var(--gold-badge-bg);
+      --color-gold-badge-text: var(--gold-badge-text);
+      
+      --color-bg-page: var(--bg-page);
+      --color-bg-sidebar: var(--bg-sidebar);
+      --color-bg-card: var(--bg-card);
+      --color-bg-card-hover: var(--bg-card-hover);
+      --color-border-main: var(--border-main);
+      --color-text-main: var(--text-main);
+      --color-text-muted: var(--text-muted);
+    }
+  </style>
+
+  <!-- Anti-flicker Theme Initializer -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('theme');
+      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-bg-page text-text-main min-h-screen selection:bg-gold-primary selection:text-white relative overflow-x-hidden transition-colors duration-300">
+  
+  <!-- Decorative background glows -->
+  <div class="absolute w-96 h-96 rounded-full bg-gold-primary/10 blur-[120px] top-[-10%] left-[-10%] pointer-events-none"></div>
+  <div class="absolute w-96 h-96 rounded-full bg-gold-secondary/5 blur-[120px] top-1/2 right-[-10%] pointer-events-none"></div>
+
+  <!-- Navbar -->
+  <header class="fixed top-0 w-full bg-bg-page/80 backdrop-blur-md border-b border-border-main z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-20">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-gold-primary to-gold-secondary flex items-center justify-center text-xl shadow-lg shadow-gold-primary/20">
+            <i data-lucide="hospital"></i>
+          </div>
+          <span class="text-2xl font-extrabold text-shiny-gold tracking-wide">CareTrack</span>
+        </div>
+        
+        <div class="flex items-center gap-4">
+          <button id="themeToggle" class="w-10 h-10 rounded-xl bg-bg-card border border-border-main hover:border-gold-primary/40 flex items-center justify-center text-lg hover:scale-105 active:scale-95 transition-all cursor-pointer" title="Mavzuni o'zgartirish">
+            <i data-lucide="moon"></i>
+          </button>
+          <a href="/login" class="px-6 py-2.5 bg-gradient-to-r from-gold-primary to-gold-secondary text-white dark:text-black font-bold rounded-xl shadow-md shadow-gold-primary/20 hover:shadow-lg hover:shadow-gold-primary/30 transition-all btn-premium text-sm flex items-center gap-2">
+            <i data-lucide="lock" class="w-4 h-4"></i> Kirish
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main class="pt-32 pb-16 sm:pt-40 sm:pb-24 lg:pb-32 px-4 max-w-7xl mx-auto relative z-10">
+    <div class="text-center max-w-3xl mx-auto">
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6">
+        Tibbiyot muassasangizni <br class="hidden sm:block"> 
+        <span class="text-shiny-gold">aqlli tizim</span> bilan boshqaring
+      </h1>
+      <p class="text-lg sm:text-xl text-text-muted mb-10 leading-relaxed font-medium">
+        Bemorlar hisobi, kasallik tashxislari va shifokorlar uchrashuvlarini yagona platformada birlashtiring. Premium, tez va xavfsiz boshqaruv tizimi.
+      </p>
+      
+      <div class="flex flex-col sm:flex-row justify-center gap-4">
+        <a href="/login" class="px-8 py-4 bg-gradient-to-r from-gold-primary to-gold-secondary text-white dark:text-black font-bold rounded-xl shadow-lg shadow-gold-primary/20 hover:shadow-xl hover:shadow-gold-primary/30 transition-all btn-premium text-lg flex items-center justify-center gap-2">
+          Boshlash <span class="text-xl"><i data-lucide="rocket" class="w-5 h-5"></i></span>
+        </a>
+        <a href="#features" class="px-8 py-4 bg-bg-card border-2 border-border-main hover:border-gold-primary/50 text-text-main font-bold rounded-xl hover:bg-bg-card-hover transition-all btn-premium text-lg flex items-center justify-center">
+          Batafsil ma'lumot
+        </a>
+      </div>
+    </div>
+
+    <!-- Features Grid -->
+    <div id="features" class="mt-32 grid grid-cols-1 md:grid-cols-3 gap-8">
+      
+      <!-- Feature 1 -->
+      <div class="glow-card p-8 group">
+        <div class="w-14 h-14 rounded-2xl bg-gold-badge-bg text-gold-primary flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform">
+          <i data-lucide="users"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-3">Bemorlar hisobi</h3>
+        <p class="text-text-muted">
+          Bemorlarning barcha ma'lumotlari: shaxsiy raqamlari, qon guruhi va to'liq tarixi qo'l ostingizda.
+        </p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="glow-card p-8 group">
+        <div class="w-14 h-14 rounded-2xl bg-gold-badge-bg text-gold-primary flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform">
+          <i data-lucide="clipboard-list"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-3">Tashxis va Davolash</h3>
+        <p class="text-text-muted">
+          Kasalliklarni ro'yxatga oling, kerakli dorilarni yozing va bemorning holatini kuzatib boring.
+        </p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="glow-card p-8 group">
+        <div class="w-14 h-14 rounded-2xl bg-gold-badge-bg text-gold-primary flex items-center justify-center text-2xl mb-6 group-hover:scale-110 transition-transform">
+          <i data-lucide="diamond"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-3">Premium Dizayn</h3>
+        <p class="text-text-muted">
+          Ko'zni qamashtiruvchi dark/light mode dizayn va yumshoq animatsiyalar orqali ishingizdan zavq oling.
+        </p>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-border-main py-10 mt-10 relative z-10">
+    <div class="max-w-7xl mx-auto px-4 text-center">
+      <div class="flex items-center justify-center gap-2 mb-4">
+        <span class="text-xl"><i data-lucide="hospital"></i></span>
+        <span class="font-bold text-shiny-gold">CareTrack Clinic</span>
+      </div>
+      <p class="text-text-muted text-sm">
+        © 2026 CareTrack Clinic MRMS. Barcha huquqlar himoyalangan.
+      </p>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

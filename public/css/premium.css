@@ -1,0 +1,195 @@
+/* Premium UI Additions */
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+
+@keyframes pulse-glow-scale {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+.pulse-dot {
+  position: relative;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  background-color: var(--pulse-bg);
+}
+
+.pulse-dot::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 50%;
+  background-color: var(--pulse-bg);
+  animation: pulse-glow-scale 2s infinite ease-out;
+  z-index: -1;
+}
+
+.pulse-red { --pulse-bg: #ef4444; }
+.pulse-amber { --pulse-bg: #f59e0b; }
+.pulse-emerald { --pulse-bg: #10b981; }
+
+/* Mesh Gradient Blobs */
+.mesh-bg-container {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.mesh-blob {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.3;
+  /* Animatsiyalar olib tashlandi: 165 FPS va GPU ga nagruzka bermaslik uchun statik qilingan */
+}
+
+.dark .mesh-blob {
+  opacity: 0.12;
+}
+
+.blob-1 {
+  background: radial-gradient(circle, var(--gold-primary) 0%, transparent 70%);
+  width: 40vw; height: 40vw;
+  top: -10%; left: -10%;
+}
+
+.blob-2 {
+  background: radial-gradient(circle, #3b82f6 0%, transparent 70%);
+  width: 30vw; height: 30vw;
+  bottom: -10%; right: -10%;
+}
+
+.blob-3 {
+  background: radial-gradient(circle, #10b981 0%, transparent 70%);
+  width: 25vw; height: 25vw;
+  top: 40%; left: 60%;
+}
+
+/* Glassmorphism Elements (Optimized for 165FPS+) */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.96) !important; /* Removed heavy backdrop-filter */
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark .glass-panel {
+  background: rgba(18, 18, 18, 0.96) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Floating Table Rows */
+.floating-table {
+  border-spacing: 0 10px;
+  border-collapse: separate;
+}
+
+.floating-table tbody tr {
+  background: var(--bg-card);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+  transition: transform 0.2s, box-shadow 0.2s;
+  border-radius: 12px;
+}
+
+.dark .floating-table tbody tr {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.floating-table tbody tr:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.dark .floating-table tbody tr:hover {
+  box-shadow: 0 5px 15px rgba(218, 181, 70, 0.05);
+}
+
+.floating-table td {
+  padding: 16px;
+  border-top: 1px solid var(--border-main);
+  border-bottom: 1px solid var(--border-main);
+}
+
+.floating-table td:first-child {
+  border-left: 1px solid var(--border-main);
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.floating-table td:last-child {
+  border-right: 1px solid var(--border-main);
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* Dashboard Specifics */
+.dash-card {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.dash-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+  z-index: -1;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.dark .dash-card::before {
+  background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+}
+
+.dash-card:hover::before {
+  opacity: 1;
+}
+
+.icon-wrapper-large {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  position: relative;
+}
+
+.icon-wrapper-large::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 24px;
+  border: 2px dashed rgba(178, 130, 40, 0.3);
+  opacity: 0;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.dash-card:hover .icon-wrapper-large::after {
+  opacity: 1;
+  transform: scale(1.05);
+}

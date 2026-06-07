@@ -1,0 +1,150 @@
+<%- include('../partials/header') %>
+
+<!-- Profile Header Card -->
+<div class="bg-bg-card border border-border-main rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 glow-card mb-8">
+  <div class="p-6 md:p-8 bg-gradient-to-r from-gold-primary/5 via-bg-card to-bg-card border-b border-border-main">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <h2 class="text-2xl font-black text-shiny-gold"><i data-lucide="stethoscope"></i> <%= doctor.full_name %></h2>
+        <p class="text-sm text-text-muted mt-1"><%= doctor.specialty %> · Tajriba: <span class="text-gold-primary font-bold"><%= doctor.experience_years %> yil</span></p>
+      </div>
+      
+      <div class="flex flex-wrap gap-3">
+        <% if (user.role === 'admin' || user.role === 'clinician') { %>
+          <a href="/doctors/<%= doctor.id %>/edit" class="px-4 py-2.5 bg-bg-page border border-border-main hover:border-gold-primary/40 text-gold-primary font-bold rounded-xl transition-all text-xs flex items-center gap-1 cursor-pointer btn-premium">
+            <i data-lucide="edit-2" class="w-4 h-4"></i> Tahrirlash
+          </a>
+        <% } %>
+        <% if (user.role === 'admin') { %>
+          <button class="px-4 py-2.5 bg-red-500/10 border border-red-500/20 hover:bg-red-600 hover:text-white text-red-500 font-bold rounded-xl transition-all text-xs flex items-center gap-1 cursor-pointer btn-premium" onclick="confirmDelete(<%= doctor.id %>)">
+            <i data-lucide="trash-2" class="w-4 h-4"></i> O'chirish
+          </button>
+        <% } %>
+        <a href="/doctors" class="px-4 py-2.5 bg-bg-page border border-border-main hover:bg-bg-card-hover text-text-main font-semibold rounded-xl transition-all text-xs flex items-center gap-1 cursor-pointer btn-premium">
+          ← Orqaga
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="p-6 md:p-8">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="bg-bg-page border border-border-main p-4.5 rounded-xl">
+        <span class="text-xs text-text-muted uppercase tracking-wider block mb-1">Telefon</span>
+        <span class="text-sm font-semibold text-text-main"><%= doctor.phone || 'Kiritilmagan' %></span>
+      </div>
+      <div class="bg-bg-page border border-border-main p-4.5 rounded-xl">
+        <span class="text-xs text-text-muted uppercase tracking-wider block mb-1">Email</span>
+        <span class="text-sm font-semibold text-text-main truncate block font-mono"><%= doctor.email || 'Kiritilmagan' %></span>
+      </div>
+      <div class="bg-bg-page border border-border-main p-4.5 rounded-xl">
+        <span class="text-xs text-text-muted uppercase tracking-wider block mb-1">Bemorlar soni</span>
+        <span class="text-sm font-bold text-gold-primary"><%= patientCount %> ta</span>
+      </div>
+      <div class="bg-bg-page border border-border-main p-4.5 rounded-xl">
+        <span class="text-xs text-text-muted uppercase tracking-wider block mb-1">Tashxislar soni</span>
+        <span class="text-sm font-bold text-gold-primary"><%= illnesses.length %> ta</span>
+      </div>
+    </div>
+
+    <% if (doctor.bio) { %>
+    <div class="mt-6 p-4 bg-bg-page border border-border-main rounded-xl">
+      <span class="text-xs text-text-muted uppercase tracking-wider block mb-1.5">Biografiya</span>
+      <p class="text-sm text-text-main leading-relaxed"><%= doctor.bio %></p>
+    </div>
+    <% } %>
+  </div>
+
+  <!-- Delete Modal -->
+  <% if (user.role === 'admin') { %>
+  <div class="confirm-delete" id="deleteModal-<%= doctor.id %>">
+    <div class="modal-content text-left">
+      <h3 class="text-lg font-bold text-text-main flex items-center gap-2 mb-3">
+        <i data-lucide="alert-triangle" class="w-5 h-5"></i> O'chirishni tasdiqlang
+      </h3>
+      <p class="text-sm text-text-muted mb-6">
+        Haqiqatan ham shifokor <strong><%= doctor.full_name %></strong>ni o'chirmoqchimisiz? Barcha bog'liq tashxislar tarixi ham tizimdan o'chib ketadi.
+      </p>
+      <div class="flex justify-end gap-3">
+        <button class="px-4 py-2.5 rounded-xl bg-bg-page border border-border-main hover:bg-bg-card-hover text-text-main font-semibold text-sm cursor-pointer btn-premium" onclick="closeModal(<%= doctor.id %>)">
+          Bekor qilish
+        </button>
+        <form action="/doctors/<%= doctor.id %>/delete" method="POST" class="inline">
+          <button type="submit" class="px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold text-sm cursor-pointer btn-premium">
+            O'chirish
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <% } %>
+</div>
+
+<!-- Illnesses History -->
+<div class="bg-bg-card border border-border-main rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
+  <div class="px-6 py-5 border-b border-border-main flex items-center justify-between flex-wrap gap-4">
+    <h3 class="text-base font-bold text-text-main flex items-center gap-2">
+      <i data-lucide="clipboard-list"></i> Tashxislar Tarixi
+    </h3>
+    <% if (user.role === 'admin' || user.role === 'clinician') { %>
+      <a href="/illnesses/create" class="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-gold-primary to-gold-secondary text-white dark:text-black font-bold transition-all text-xs cursor-pointer btn-premium shadow-md shadow-gold-primary/10">
+        <i data-lucide="plus" class="w-4 h-4"></i> Yangi Tashxis
+      </a>
+    <% } %>
+  </div>
+  
+  <div class="overflow-x-auto">
+    <% if (illnesses.length > 0) { %>
+    <table class="w-full text-left border-collapse">
+      <thead>
+        <tr class="bg-bg-page border-b border-border-main">
+          <th class="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider">Bemor</th>
+          <th class="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider">Tashxis</th>
+          <th class="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider">Dorilar / Muolajalar</th>
+          <th class="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider">Holat</th>
+          <th class="px-6 py-4 text-xs font-bold text-text-muted uppercase tracking-wider">Sana</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-border-main">
+        <% illnesses.forEach(illness => { %>
+        <tr class="hover:bg-bg-card-hover transition-colors">
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-text-main">
+            <a href="/patients/<%= illness.patient_id %>" class="text-gold-primary hover:text-gold-secondary hover:underline">
+              <%= illness.patient_name %>
+            </a>
+          </td>
+          <td class="px-6 py-4 text-sm text-text-main">
+            <span class="bg-bg-page border border-border-main px-2.5 py-1 rounded text-xs text-gold-primary font-semibold">
+              <%= illness.diagnosis %>
+            </span>
+          </td>
+          <td class="px-6 py-4 text-sm text-text-main">
+            <%= illness.prescribed_meds || '—' %>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap">
+            <% if (illness.status === 'Faol') { %>
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[var(--badge-faol-bg)] border border-[var(--badge-faol-border)] text-[var(--badge-faol-text)]">Faol</span>
+            <% } else if (illness.status === 'Davolanmoqda') { %>
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[var(--badge-dav-bg)] border border-[var(--badge-dav-border)] text-[var(--badge-dav-text)]">Davolanmoqda</span>
+            <% } else { %>
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[var(--badge-tuz-bg)] border border-[var(--badge-tuz-border)] text-[var(--badge-tuz-text)]">Tuzalgan</span>
+            <% } %>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-xs text-text-muted">
+            <%= illness.diagnosed_date %>
+          </td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+    <% } else { %>
+    <div class="py-12 text-center">
+      <div class="text-4xl mb-3"><i data-lucide="clipboard-list"></i></div>
+      <h3 class="text-sm font-bold text-text-muted">Tashxislar yo'q</h3>
+      <p class="text-xs text-text-muted/65 mt-1">Bu shifokor hali hech kimga tashxis qo'ymagan</p>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

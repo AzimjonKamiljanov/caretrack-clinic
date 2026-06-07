@@ -1,0 +1,297 @@
+/* Custom CSS — CareTrack Clinic Gold & Black Theme */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  font-family: 'Outfit', sans-serif;
+
+  /* --- LIGHT MODE (Soft White & Soft Gold) --- */
+  --bg-page: #FDFBF7;           /* Very Soft warm white */
+  --bg-sidebar: #FFFFFF;        /* Pure white sidebar */
+  --bg-card: #FFFFFF;           /* Card background */
+  --bg-card-hover: #F8F5EF;     /* Warm row hover */
+  --border-main: #EFECE5;       /* Soft border */
+  --text-main: #2A2723;         /* Warm dark text */
+  --text-muted: #6B665E;        /* Muted body text */
+  
+  --gold-primary: #B28228;      /* Deeper, more contrasting soft gold */
+  --gold-secondary: #966B1D;    /* Darker soft gold */
+  --gold-bg: #FDF9F1;           /* Light gold background tint */
+  --gold-badge-bg: rgba(178, 130, 40, 0.12);
+  --gold-badge-text: #8A6114;
+  
+  --badge-faol-bg: rgba(239, 68, 68, 0.1);
+  --badge-faol-text: #B91C1C;
+  --badge-faol-border: rgba(239, 68, 68, 0.2);
+  
+  --badge-dav-bg: rgba(245, 158, 11, 0.1);
+  --badge-dav-text: #B45309;
+  --badge-dav-border: rgba(245, 158, 11, 0.2);
+  
+  --badge-tuz-bg: rgba(16, 185, 129, 0.1);
+  --badge-tuz-text: #047857;
+  --badge-tuz-border: rgba(16, 185, 129, 0.2);
+}
+
+.dark {
+  /* --- DARK MODE (Deep Black & Polished Gold) --- */
+  --bg-page: #050505;           /* Almost pure black */
+  --bg-sidebar: #0A0A0A;        /* Deep black sidebar */
+  --bg-card: #121212;           /* Carbon dark card */
+  --bg-card-hover: #1A1A1A;     /* Dark row hover */
+  --border-main: #242424;       /* Dark border */
+  --text-main: #F2F2F2;         /* Light text */
+  --text-muted: #999999;        /* Muted gray */
+  
+  --gold-primary: #DAB546;      /* Bright, clear premium gold */
+  --gold-secondary: #B89632;    /* Polished gold */
+  --gold-bg: #1F1B0B;           /* Gold background tint */
+  --gold-badge-bg: rgba(218, 181, 70, 0.12);
+  --gold-badge-text: #FCE69B;
+  
+  --badge-faol-bg: rgba(239, 68, 68, 0.15);
+  --badge-faol-text: #F87171;
+  --badge-faol-border: rgba(239, 68, 68, 0.3);
+  
+  --badge-dav-bg: rgba(245, 158, 11, 0.15);
+  --badge-dav-text: #FBBF24;
+  --badge-dav-border: rgba(245, 158, 11, 0.3);
+  
+  --badge-tuz-bg: rgba(16, 185, 129, 0.15);
+  --badge-tuz-text: #34D399;
+  --badge-tuz-border: rgba(16, 185, 129, 0.3);
+}
+
+body {
+  background-color: var(--bg-page);
+  color: var(--text-main);
+  /* Faster transition, only specific properties */
+  transition: background-color 0.2s ease-out, color 0.2s ease-out;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-page);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-main);
+  border-radius: 4px;
+  border: 1px solid rgba(218, 181, 70, 0.05);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-primary);
+}
+
+/* Premium Card Border Styling */
+.glow-card {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--bg-card);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.2s ease-out;
+}
+
+.dark .glow-card {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.glow-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.06);
+}
+
+.dark .glow-card:hover {
+  box-shadow: 0 8px 30px rgba(218, 181, 70, 0.08);
+}
+
+.glow-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  border: 1px solid rgba(178, 130, 40, 0.15);
+  pointer-events: none;
+  transition: border-color 0.2s ease-out;
+}
+
+.dark .glow-card::after {
+  border-color: rgba(218, 181, 70, 0.1);
+}
+
+.glow-card:hover::after {
+  border-color: var(--gold-primary);
+}
+
+/* Premium Buttons Global Override */
+button, .btn, a[class*="bg-"] {
+  border-radius: 12px !important; /* Premium slightly squircle shape */
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease-out, background-color 0.2s ease-out, border-color 0.2s ease-out, color 0.2s ease-out !important;
+  font-weight: 500 !important;
+}
+
+button:hover, .btn:hover, a[class*="bg-"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08) !important;
+}
+
+.dark button:hover, .dark .btn:hover, .dark a[class*="bg-"]:hover {
+  box-shadow: 0 6px 15px rgba(218, 181, 70, 0.15) !important;
+}
+
+button:active, .btn:active, a[class*="bg-"]:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Specific styling for gold buttons to make them look more premium */
+.bg-\[\var\(--gold-primary\)\] {
+  background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-secondary) 100%) !important;
+  border: 1px solid var(--gold-secondary) !important;
+  color: #FFFFFF !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.dark .bg-\[\var\(--gold-primary\)\] {
+  color: #050505 !important;
+  text-shadow: none;
+}
+
+/* Modal Windows for Delete Confirmation */
+.confirm-delete {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px); /* Reduced blur for performance */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-out;
+}
+
+.dark .confirm-delete {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.confirm-delete.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.confirm-delete .modal-content {
+  background: var(--bg-card);
+  border: 1px solid rgba(178, 130, 40, 0.2);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 440px;
+  width: 90%;
+  transform: scale(0.95);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dark .confirm-delete .modal-content {
+  box-shadow: 0 0 35px rgba(218, 181, 70, 0.08);
+  border: 1px solid rgba(218, 181, 70, 0.2);
+}
+
+.confirm-delete.show .modal-content {
+  transform: scale(1);
+}
+
+/* Gold Text Gradient */
+.text-shiny-gold {
+  background: linear-gradient(135deg, #DEB841 0%, var(--gold-primary) 50%, #966B1D 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.dark .text-shiny-gold {
+  background: linear-gradient(135deg, #FCE69B 0%, var(--gold-primary) 50%, #B89632 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Sidebar Responsive Transition */
+.sidebar {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s ease-out, border-color 0.2s ease-out;
+  will-change: transform;
+}
+
+.sidebar.open {
+  transform: translateX(0) !important;
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+  z-index: 30;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-out;
+}
+
+.dark .sidebar-overlay {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.sidebar-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Active Link Styles override */
+.sidebar-nav a.active {
+  background: linear-gradient(135deg, var(--gold-primary) 0%, var(--gold-secondary) 100%);
+  color: #FFFFFF !important;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(178, 130, 40, 0.2);
+  border-radius: 12px;
+}
+
+.dark .sidebar-nav a.active {
+  color: #050505 !important;
+  box-shadow: 0 4px 15px rgba(218, 181, 70, 0.3);
+}
+
+/* Form Inputs styling */
+input[type="text"], input[type="date"], input[type="number"], input[type="password"], input[type="email"], select, textarea {
+  border-radius: 12px !important;
+  transition: border-color 0.2s ease-out, box-shadow 0.2s ease-out, background-color 0.2s ease-out, color 0.2s ease-out !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: var(--gold-primary) !important;
+  box-shadow: 0 0 0 3px rgba(178, 130, 40, 0.15) !important;
+}
+
+.dark input:focus, .dark select:focus, .dark textarea:focus {
+  box-shadow: 0 0 0 3px rgba(218, 181, 70, 0.2) !important;
+}
+
+/* Ensure select options are visible in all themes */
+select option {
+  background-color: var(--bg-card);
+  color: var(--text-main);
+}
