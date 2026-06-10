@@ -1,32 +1,128 @@
+// ==========================================
+// CareTrack Clinic — Ma'lumotlar Bazasi Moduli
+// sql.js kutubxonasi yordamida SQLite baza boshqaruvi
+// ==========================================
+
 const initSqlJs = require('sql.js'); // SQL xotira bazasini yuklash (sql.js)
 const fs = require('fs'); // Fayllarni o'qish/yozish moduli
 const path = require('path'); // Fayl manzillarini ishlash moduli
-const DB_PATH = path.join(__dirname, 'caretrack.db'); // Ma'lumotlar bazasi faylining joylashuvi
-let db = null; // Baza obyektini saqlash uchun o'zgaruvchi
+const DB_PATH = path.join(__dirname, 'caretrack.db'); // Baza faylining joylashuvi
+let db = null; // Global baza obyekti (xotirada saqlanadi)
 
-async function getDb() { // Ma'lumotlar bazasini ishga tushirish va jadvallarni tekshirish funksiyasi
-  if (db) return db; // Agar baza mavjud bo'lsa darhol qaytarish
+// ===== BAZANI ISHGA TUSHIRISH =====
+// Bazani yuklash yoki yangi yaratish va jadvallarni tekshirish
+async function getDb() {
+  if (db) return db; // Agar baza allaqachon yuklangan bo'lsa — qaytarish
+
   const SQL = await initSqlJs(); // sql.js kutubxonasini asinxron ishga tushirish
-  db = fs.existsSync(DB_PATH) ? new SQL.Database(fs.readFileSync(DB_PATH)) : new SQL.Database(); // Fayl bo'lsa undan, yo'qsa yangi bo'sh baza yaratish
-  db.run('PRAGMA foreign_keys = ON'); // Tashqi kalitlar (foreign keys) himoyasini yoqish
-  const tables = [ // Yaratiladigan barcha jadvallar SQL kodlari massivi
-    `CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password TEXT NOT NULL, full_name TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('admin', 'clinician', 'receptionist')), created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`, // Foydalanuvchilar jadvali
-    `CREATE TABLE IF NOT EXISTS doctors (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT NOT NULL, specialty TEXT NOT NULL, phone TEXT, email TEXT, experience_years INTEGER DEFAULT 0, bio TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`, // Shifokorlar jadvali
-    `CREATE TABLE IF NOT EXISTS patients (id INTEGER PRIMARY KEY AUTOINCREMENT, full_name TEXT NOT NULL, date_of_birth TEXT, gender TEXT CHECK(gender IN ('Erkak', 'Ayol')), phone TEXT, address TEXT, blood_type TEXT, emergency_contact TEXT, doctor_id INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE SET NULL)`, // Bemorlar jadvali
-    `CREATE TABLE IF NOT EXISTS illnesses (id INTEGER PRIMARY KEY AUTOINCREMENT, patient_id INTEGER NOT NULL, doctor_id INTEGER NOT NULL, diagnosis TEXT NOT NULL, description TEXT, prescribed_meds TEXT, status TEXT DEFAULT 'Faol' CHECK(status IN ('Faol', 'Davolanmoqda', 'Tuzalgan')), diagnosed_date TEXT DEFAULT (date('now')), created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE, FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE)` // Tashxislar jadvali
-  ]; // Massiv yakunlandi
-  tables.forEach(sql => db.run(sql)); // Jadvallarni tsikl orqali bazaga yaratish
-  saveDb(); return db; // Bazani faylga saqlash va natijani qaytarish
-} // getDb funksiyasi tugadi
 
-const saveDb = () => db && fs.writeFileSync(DB_PATH, Buffer.from(db.export())); // Baza o'zgarganda xotiradagi nusxani faylga yozish funksiyasi
-const queryAll = (sql, params = []) => { // Barcha mos natijalarni olish funksiyasi (SELECT yordamchisi)
-  const stmt = db.prepare(sql); if (params.length) stmt.bind(params); // SQL so'rovni tayyorlash va parametrlarni ulash
-  const res = []; while (stmt.step()) res.push(stmt.getAsObject()); // Barcha qatorlarni aylanib obyekt massiviga yig'ish
-  stmt.free(); return res; // Xotirani tozalash va natijani qaytarish
-}; // queryAll tugadi
+  // Fayl mavjud bo'lsa — undan yuklash, yo'qsa — yangi bo'sh baza yaratish
+  if (fs.existsSync(DB_PATH)) {
+    db = new SQL.Database(fs.readFileSync(DB_PATH));
+  } else {
+    db = new SQL.Database();
+  }
 
-const queryOne = (sql, params = []) => queryAll(sql, params)[0] || null; // queryAll natijasining faqat birinchisini (yoki null) qaytarish
-const runSql = (sql, params = []) => { db.run(sql, params); saveDb(); return { changes: db.getRowsModified() }; }; // INSERT/UPDATE/DELETE buyruqlarini bajarish va bazani saqlash
+  db.run('PRAGMA foreign_keys = ON'); // Tashqi kalitlar himoyasini yoqish
 
-module.exports = { getDb, queryAll, queryOne, runSql, saveDb }; // Funksiyalarni boshqa fayllar foydalanishi uchun eksport qilish
+  // ===== JADVALLAR YARATISH =====
+  const tables = [
+    // Foydalanuvchilar jadvali (login, parol, rol)
+    `CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL UNIQUE,
+      password TEXT NOT NULL,
+      full_name TEXT NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('admin', 'clinician', 'receptionist')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+
+    // Shifokorlar jadvali (mutaxassislik, tajriba, bio)
+    `CREATE TABLE IF NOT EXISTS doctors (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      full_name TEXT NOT NULL,
+      specialty TEXT NOT NULL,
+      phone TEXT,
+      email TEXT,
+      experience_years INTEGER DEFAULT 0,
+      bio TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`,
+
+    // Bemorlar jadvali (shaxsiy ma'lumotlar, qon guruhi, shifokor)
+    `CREATE TABLE IF NOT EXISTS patients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      full_name TEXT NOT NULL,
+      date_of_birth TEXT,
+      gender TEXT CHECK(gender IN ('Erkak', 'Ayol')),
+      phone TEXT,
+      address TEXT,
+      blood_type TEXT,
+      emergency_contact TEXT,
+      doctor_id INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE SET NULL
+    )`,
+
+    // Tashxislar jadvali (kasallik, dori, holat)
+    `CREATE TABLE IF NOT EXISTS illnesses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      patient_id INTEGER NOT NULL,
+      doctor_id INTEGER NOT NULL,
+      diagnosis TEXT NOT NULL,
+      description TEXT,
+      prescribed_meds TEXT,
+      status TEXT DEFAULT 'Faol' CHECK(status IN ('Faol', 'Davolanmoqda', 'Tuzalgan')),
+      diagnosed_date TEXT DEFAULT (date('now')),
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+      FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
+    )`
+  ];
+
+  // Barcha jadvallarni tsikl orqali yaratish
+  tables.forEach(sql => db.run(sql));
+
+  saveDb(); // Bazani faylga saqlash
+  return db; // Baza obyektini qaytarish
+}
+
+// ===== BAZANI FAYLGA SAQLASH =====
+// Xotiradagi nusxani .db fayliga yozish
+const saveDb = () => {
+  if (db) fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
+};
+
+// ===== BARCHA NATIJALARNI OLISH (SELECT) =====
+// SQL so'rovni bajarib, barcha mos qatorlarni massiv sifatida qaytarish
+const queryAll = (sql, params = []) => {
+  if (!db) return []; // Baza tayyor emas bo'lsa — bo'sh massiv qaytarish
+  const stmt = db.prepare(sql); // SQL so'rovni tayyorlash
+  if (params.length) stmt.bind(params); // Parametrlarni ulash
+  const results = []; // Natijalar massivi
+  while (stmt.step()) results.push(stmt.getAsObject()); // Har bir qatorni obyektga aylantirish
+  stmt.free(); // Xotirani tozalash
+  return results; // Natijalarni qaytarish
+};
+
+// ===== BITTA NATIJANI OLISH =====
+// queryAll natijasining faqat birinchi elementini qaytarish (yoki null)
+const queryOne = (sql, params = []) => {
+  return queryAll(sql, params)[0] || null;
+};
+
+// ===== INSERT/UPDATE/DELETE BAJARISH =====
+// Ma'lumotlarni o'zgartiruvchi SQL buyruqlarini bajarish va bazani saqlash
+const runSql = (sql, params = []) => {
+  if (!db) return { changes: 0 }; // Baza tayyor emas bo'lsa
+  db.run(sql, params); // SQL buyruqni bajarish
+  saveDb(); // O'zgarishlarni faylga saqlash
+  return { changes: db.getRowsModified() }; // Nechta qator o'zgarganini qaytarish
+};
+
+// ===== EKSPORT =====
+// Boshqa fayllar (server.js, seed.js) foydalanishi uchun eksport
+module.exports = { getDb, queryAll, queryOne, runSql, saveDb };

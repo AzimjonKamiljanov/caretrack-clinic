@@ -8,7 +8,7 @@
   </div>
   
   <% if (user.role === 'admin' || user.role === 'clinician') { %>
-    <a href="/illnesses/create" class="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-gold-primary to-gold-secondary text-white dark:text-black font-bold transition-all duration-300 shadow-md shadow-gold-primary/10 hover:shadow-lg hover:shadow-gold-primary/20 cursor-pointer text-sm btn-premium">
+    <a href="/illnesses/create" class="flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-[var(--gold-primary)] font-bold transition-all duration-300 shadow-md shadow-gold-primary/10 hover:shadow-lg hover:shadow-gold-primary/20 cursor-pointer text-sm btn-premium">
       <i data-lucide="plus" class="w-4 h-4"></i> Yangi Tashxis
     </a>
   <% } %>
@@ -107,7 +107,7 @@
       <h3 class="text-base font-bold text-text-muted">Tashxislar topilmadi</h3>
       <p class="text-xs text-text-muted/65 mt-1 mb-6">Hali hech qanday tashxis kiritilmagan.</p>
       <% if (user.role === 'admin' || user.role === 'clinician') { %>
-        <a href="/illnesses/create" class="inline-flex gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-gold-primary to-gold-secondary text-white dark:text-black font-bold transition-all duration-300 btn-premium">
+        <a href="/illnesses/create" class="inline-flex gap-2 px-5 py-3 rounded-xl bg-[var(--gold-primary)] font-bold transition-all duration-300 btn-premium">
           <i data-lucide="plus" class="w-4 h-4"></i> Yangi tashxis qo'shish
         </a>
       <% } %>

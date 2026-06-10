@@ -1,109 +1,553 @@
+// ==========================================
+// CareTrack Clinic — Asosiy Server Fayli
+// Tibbiy Yozuvlarni Boshqarish Tizimi (MRMS)
+// ==========================================
+
 const express = require('express'); // Express web server kutubxonasini yuklash
-const session = require('express-session'); // Sessiyalarni boshqarish kutubxonasini yuklash
+const session = require('express-session'); // Sessiyalarni boshqarish kutubxonasi
 const path = require('path'); // Fayl manzillari bilan ishlash moduli
 const bcrypt = require('bcryptjs'); // Parollarni xavfsiz shifrlash kutubxonasi
-const axios = require('axios'); // Tashqi API bilan ishlash uchun Axios
-const qr = require('qrcode'); // QR kod yaratish kutubxonasini yuklash
-const { getDb, queryAll, queryOne, runSql } = require('./database'); // Ma'lumotlar bazasi yordamchi funksiyalari
+const axios = require('axios'); // Tashqi API bilan ishlash uchun HTTP client
+const qr = require('qrcode'); // QR kod yaratish kutubxonasi
+const { getDb, queryAll, queryOne, runSql } = require('./database'); // Baza yordamchi funksiyalari
 
+// ===== EXPRESS ILOVASINI SOZLASH =====
 const app = express(); // Express ilovasini yaratish
 app.set('view engine', 'ejs'); // EJS shablon tizimini ulash
 app.set('views', path.join(__dirname, 'views')); // Shablonlar papkasini sozlash
 app.use(express.urlencoded({ extended: true })); // HTML form ma'lumotlarini o'qish
 app.use(express.json()); // JSON ma'lumotlarini o'qish
-app.use(express.static(path.join(__dirname, 'public'))); // Statik fayllar papkasi
-app.use(session({ secret: 'btec-secret-2026', resave: false, saveUninitialized: false })); // Sessiyani maxfiy kalit bilan sozlash
+app.use(express.static(path.join(__dirname, 'public'))); // Statik fayllar papkasi (CSS, JS)
 
-app.use((req, res, next) => { // Global middleware: barcha EJS fayllar uchun
-  res.locals.user = req.session.user || null; // Foydalanuvchini uzatish
-  res.locals.success = req.session.success || null; delete req.session.success; // Muvaffaqiyat xabari
-  res.locals.error = req.session.error || null; delete req.session.error; // Xatolik xabari
+// ===== SESSIYA SOZLAMALARI =====
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'btec-secret-2026', // Sessiya maxfiy kaliti
+  resave: false, // Har so'rovda qayta saqlamaslik
+  saveUninitialized: false // Bo'sh sessiyalarni saqlamaslik
+}));
+
+// ===== GLOBAL MIDDLEWARE =====
+// Barcha EJS shablonlarga umumiy o'zgaruvchilarni uzatish
+app.use((req, res, next) => {
+  res.locals.user = req.session.user || null; // Joriy foydalanuvchi
+  res.locals.success = req.session.success || null; // Muvaffaqiyat xabari
+  res.locals.error = req.session.error || null; // Xatolik xabari
+  delete req.session.success; // Xabarni bir marta ko'rsatib o'chirish
+  delete req.session.error; // Xabarni bir marta ko'rsatib o'chirish
   next(); // Keyingi funksiyaga o'tish
-}); // Global middleware tugadi
+});
 
-const isAuth = (req, res, next) => req.session.user ? next() : res.redirect('/login'); // Tizimga kirganlikni tekshirish
-const roleCheck = (roles) => (req, res, next) => (req.session.user && roles.includes(req.session.user.role)) ? next() : res.status(403).render('error', { title: 'Xato', message: 'Ruxsat yo\'q', user: req.session.user }); // Rollarni tekshirish
+// ===== AUTENTIFIKATSIYA MIDDLEWARE =====
+// Tizimga kirganlikni tekshirish
+const isAuth = (req, res, next) => {
+  if (req.session.user) return next(); // Kirgan bo'lsa — davom etish
+  return res.redirect('/login'); // Kirmagan bo'lsa — login sahifaga
+};
 
-app.route('/login') // Login uchun marshrut zanjiri
-  .get((req, res) => req.session.user ? res.redirect('/dashboard') : res.render('login', { title: 'Kirish' })) // GET: Formani ko'rsatish
-  .post((req, res) => { // POST: Ma'lumotlarni tekshirish
-    const user = queryOne('SELECT * FROM users WHERE username=?', [req.body.username]); // Bazadan qidirish
-    if (user && bcrypt.compareSync(req.body.password, user.password)) { // Parolni bcrypt bilan tekshirish
-      req.session.user = { id: user.id, username: user.username, full_name: user.full_name, role: user.role }; // Sessiyaga yozish
-      req.session.success = 'Xush kelibsiz!'; return res.redirect('/dashboard'); // Dashboardga yo'naltirish
-    } // Tekshiruv tugadi
-    req.session.error = 'Xato login yoki parol'; res.redirect('/login'); // Xatolik qaytarish
-  }); // Login zanjiri tugadi
+// Foydalanuvchi rolini tekshirish (admin, clinician, receptionist)
+const roleCheck = (roles) => (req, res, next) => {
+  if (req.session.user && roles.includes(req.session.user.role)) {
+    return next(); // Ruxsat berilgan rol bo'lsa — davom
+  }
+  return res.status(403).render('error', { // Ruxsat yo'q — xato sahifasi
+    title: 'Xato',
+    message: 'Sizda ushbu sahifaga kirish huquqi yo\'q'
+  });
+};
 
-app.get('/logout', (req, res) => { req.session.destroy(); res.redirect('/login'); }); // Tizimdan chiqish
-app.get('/', (req, res) => req.session.user ? res.redirect('/dashboard') : res.render('landing', { title: 'Bosh sahifa' })); // Asosiy sahifa
+// ===== YORDAMCHI FUNKSIYALAR (DRY PATTERN) =====
+const helper = {
+  // HTML sahifani render qilish qulayligi
+  render: (res, view, opts) => res.render(view, opts),
 
-app.get('/api/qrcode', async (req, res) => { // Lecture API: QR kod yaratish marshruti
-  try { res.json({ qr: await qr.toDataURL(req.query.text || 'CareTrack Clinic') }); } // QR kodni Base64 formatida qaytarish
-  catch (err) { res.status(500).json({ error: 'QR kod yaratishda xato' }); } // Xato yuz berganda
-}); // API tugadi
+  // INSERT/UPDATE so'rovini bajarish va yo'naltirish
+  redirect: (req, res, sql, params, msg, url) => {
+    if (sql) runSql(sql, params); // SQL bo'lsagina bajarish
+    req.session.success = msg; // Muvaffaqiyat xabarini yozish
+    res.redirect(url); // Berilgan manzilga yo'naltirish
+  },
 
-app.get('/dashboard', isAuth, async (req, res) => { // Boshqaruv paneli marshruti
-  const data = { doctors: queryAll('SELECT * FROM doctors'), patients: queryAll('SELECT * FROM patients'), illnesses: queryAll('SELECT * FROM illnesses') }; // Jadvallarni o'qish
-  const healthTips = await axios.get('https://jsonplaceholder.typicode.com/posts?_limit=3').then(r => r.data.map(p => ({ title: p.title, body: p.body }))).catch(() => [{ title: 'Sog\'lom', body: 'Suv ichish foydali' }]); // Axios bilan yangiliklar olish va .map yordamida formatlash
-  res.render('dashboard', { // Dashboard shablonini ko'rsatish
-    title: 'Boshqaruv Paneli', // Sarlavha
-    stats: { doctors: data.doctors.length, patients: data.patients.length, illnesses: data.illnesses.length, activeIllnesses: data.illnesses.filter(i => i.status === 'Faol').length }, // Raqamli statistika (.filter array metodi)
-    recentIllnesses: queryAll('SELECT i.*, p.full_name as patient_name, d.full_name as doctor_name FROM illnesses i JOIN patients p ON i.patient_id=p.id JOIN doctors d ON i.doctor_id=d.id ORDER BY i.created_at DESC LIMIT 5'), // So'nggi tashxislar qatori
-    statusStats: queryAll('SELECT status, COUNT(*) as count FROM illnesses GROUP BY status'), // Holat statistikasi
-    genderStats: queryAll('SELECT gender, COUNT(*) as count FROM patients WHERE gender IS NOT NULL GROUP BY gender'), // Jins statistikasi
-    doctorWorkload: queryAll('SELECT d.full_name as doctor_name, COUNT(i.id) as patient_count FROM doctors d LEFT JOIN illnesses i ON d.id=i.doctor_id GROUP BY d.id'), // Shifokorlar ish yuki
-    ageStats: (() => { // Bemorlar yoshini hisoblash funksiyasi
-      const ages = data.patients.filter(p => p.date_of_birth).map(p => new Date().getFullYear() - new Date(p.date_of_birth).getFullYear()); // .filter va .map array metodlari orqali yoshlarni topish
-      return { '0-18': ages.filter(a => a <= 18).length, '19-35': ages.filter(a => a > 18 && a <= 35).length, '36-50': ages.filter(a => a > 35 && a <= 50).length, '51+': ages.filter(a => a > 50).length }; // Yosh guruhlari boyicha sanash
-    })(), // Funksiyani chaqirish
-    healthTips // Yangiliklarni uzatish
-  }); // Render tugadi
-}); // Dashboard tugadi
+  // Jadvaldan yozuvni o'chirish (whitelist bilan himoyalangan)
+  del: (req, res, table, url) => {
+    const allowed = ['doctors', 'patients', 'illnesses', 'users']; // Ruxsat berilgan jadvallar
+    if (!allowed.includes(table)) return res.redirect(url); // Noto'g'ri jadval — rad etish
+    runSql(`DELETE FROM ${table} WHERE id=?`, [req.params.id]); // Yozuvni o'chirish
+    req.session.success = 'Muvaffaqiyatli o\'chirildi'; // Xabar yozish
+    res.redirect(url); // Ro'yxatga qaytish
+  }
+};
 
-const helper = { // Qaytariluvchi kodlarni qisqartirish uchun yordamchi DRY (Don't Repeat Yourself) obyekt
-  render: (res, view, opts) => res.render(view, opts), // HTML sahifani render qilish qulayligi
-  post: (req, res, sql, params, msg, url) => { runSql(sql, params); req.session.success = msg; res.redirect(url); }, // INSERT/UPDATE so'rovlarini bajarish va yo'naltirish
-  del: (req, res, table, url) => { runSql(`DELETE FROM ${table} WHERE id=?`, [req.params.id]); req.session.success = 'O\'chirildi'; res.redirect(url); } // O'chirish qulayligi
-}; // Yordamchi obyekt tugadi
+// ==========================================
+// MARSHRUT (ROUTE) GURUHLARI
+// ==========================================
 
-app.route('/doctors') // Shifokorlar marshrut zanjiri
-  .get(isAuth, (req, res) => helper.render(res, 'doctors/index', { title: 'Shifokorlar', doctors: queryAll('SELECT * FROM doctors ORDER BY full_name') })) // GET: Shifokorlar ro'yxati
-  .post(isAuth, roleCheck(['admin', 'clinician']), (req, res) => helper.post(req, res, 'INSERT INTO doctors (full_name, specialty, phone, email, experience_years, bio) VALUES (?,?,?,?,?,?)', [req.body.full_name, req.body.specialty, req.body.phone, req.body.email, req.body.experience_years, req.body.bio], 'Qo\'shildi', '/doctors')); // POST: Yangi qo'shish
-app.get('/doctors/create', isAuth, roleCheck(['admin', 'clinician']), (req, res) => helper.render(res, 'doctors/create', { title: 'Yangi' })); // GET: Yaratish formasi
-app.route('/doctors/:id') // Muayyan shifokor marshruti zanjiri
-  .get(isAuth, (req, res) => helper.render(res, 'doctors/show', { title: 'Shifokor', doctor: queryOne('SELECT * FROM doctors WHERE id=?', [req.params.id]), illnesses: queryAll('SELECT i.*, p.full_name as patient_name FROM illnesses i JOIN patients p ON i.patient_id=p.id WHERE i.doctor_id=?', [req.params.id]), patientCount: queryOne('SELECT COUNT(DISTINCT patient_id) as count FROM illnesses WHERE doctor_id=?', [req.params.id]).count })) // GET: Shifokor tafsiloti
-  .post(isAuth, roleCheck(['admin', 'clinician']), (req, res) => helper.post(req, res, 'UPDATE doctors SET full_name=?, specialty=?, phone=?, email=?, experience_years=?, bio=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [req.body.full_name, req.body.specialty, req.body.phone, req.body.email, req.body.experience_years, req.body.bio, req.params.id], 'Yangilandi', `/doctors/${req.params.id}`)); // POST: Tahrirlashni saqlash
-app.get('/doctors/:id/edit', isAuth, roleCheck(['admin', 'clinician']), (req, res) => helper.render(res, 'doctors/edit', { title: 'Tahrir', doctor: queryOne('SELECT * FROM doctors WHERE id=?', [req.params.id]) })); // GET: Tahrir formasi
-app.post('/doctors/:id/delete', isAuth, roleCheck(['admin']), (req, res) => helper.del(req, res, 'doctors', '/doctors')); // POST: Shifokorni o'chirish
+// ===== BOSH SAHIFA =====
+// Kirgan bo'lsa dashboard ga, kirmagan bo'lsa landing sahifaga
+app.get('/', (req, res) => {
+  if (req.session.user) return res.redirect('/dashboard');
+  res.render('landing', { title: 'Bosh sahifa' });
+});
 
-app.route('/patients') // Bemorlar marshrut zanjiri
-  .get(isAuth, (req, res) => helper.render(res, 'patients/index', { title: 'Bemorlar', patients: queryAll('SELECT p.*, d.full_name as doctor_name, d.specialty as doctor_specialty FROM patients p LEFT JOIN doctors d ON p.doctor_id=d.id ORDER BY p.full_name') })) // GET: Bemorlar ro'yxati
-  .post(isAuth, (req, res) => helper.post(req, res, 'INSERT INTO patients (full_name, date_of_birth, gender, phone, address, blood_type, emergency_contact, doctor_id) VALUES (?,?,?,?,?,?,?,?)', [req.body.full_name, req.body.date_of_birth, req.body.gender, req.body.phone, req.body.address, req.body.blood_type, req.body.emergency_contact, req.body.doctor_id], 'Ro\'yxatga olindi', '/patients')); // POST: Bemor qo'shish
-app.get('/patients/create', isAuth, (req, res) => helper.render(res, 'patients/create', { title: 'Yangi', doctors: queryAll('SELECT * FROM doctors ORDER BY full_name') })); // GET: Yaratish formasi
-app.route('/patients/:id') // Muayyan bemor zanjiri
-  .get(isAuth, (req, res) => helper.render(res, 'patients/show', { title: 'Bemor', patient: queryOne('SELECT p.*, d.full_name as doctor_name, d.specialty as doctor_specialty FROM patients p LEFT JOIN doctors d ON p.doctor_id=d.id WHERE p.id=?', [req.params.id]), illnesses: queryAll('SELECT i.*, d.full_name as doctor_name, d.specialty as doctor_specialty FROM illnesses i JOIN doctors d ON i.doctor_id=d.id WHERE i.patient_id=? ORDER BY i.diagnosed_date DESC', [req.params.id]) })) // GET: Bemor tafsiloti
-  .post(isAuth, roleCheck(['admin', 'clinician']), (req, res) => helper.post(req, res, 'UPDATE patients SET full_name=?, date_of_birth=?, gender=?, phone=?, address=?, blood_type=?, emergency_contact=?, doctor_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [req.body.full_name, req.body.date_of_birth, req.body.gender, req.body.phone, req.body.address, req.body.blood_type, req.body.emergency_contact, req.body.doctor_id, req.params.id], 'Yangilandi', `/patients/${req.params.id}`)); // POST: Tahrirlashni saqlash
-app.get('/patients/:id/edit', isAuth, roleCheck(['admin', 'clinician']), (req, res) => helper.render(res, 'patients/edit', { title: 'Tahrir', patient: queryOne('SELECT * FROM patients WHERE id=?', [req.params.id]), doctors: queryAll('SELECT * FROM doctors ORDER BY full_name') })); // GET: Tahrir formasi
-app.post('/patients/:id/delete', isAuth, roleCheck(['admin']), (req, res) => helper.del(req, res, 'patients', '/patients')); // POST: O'chirish
+// ===== LOGIN / LOGOUT =====
+// GET: Login formani ko'rsatish
+app.get('/login', (req, res) => {
+  if (req.session.user) return res.redirect('/dashboard'); // Kirgan bo'lsa — dashboard ga
+  res.render('login', { title: 'Kirish' }); // Login sahifasini ko'rsatish
+});
 
-app.route('/illnesses') // Tashxislar marshrut zanjiri
-  .get(isAuth, (req, res) => helper.render(res, 'illnesses/index', { title: 'Tashxislar', illnesses: queryAll('SELECT i.*, p.full_name as patient_name, d.full_name as doctor_name, d.specialty as doctor_specialty FROM illnesses i JOIN patients p ON i.patient_id=p.id JOIN doctors d ON i.doctor_id=d.id ORDER BY i.diagnosed_date DESC') })) // GET: Tashxislar ro'yxati
-  .post(isAuth, roleCheck(['admin', 'clinician']), (req, res) => helper.post(req, res, 'INSERT INTO illnesses (patient_id, doctor_id, diagnosis, description, prescribed_meds, status, diagnosed_date) VALUES (?,?,?,?,?,?,?)', [req.body.patient_id, req.body.doctor_id, req.body.diagnosis, req.body.description, req.body.prescribed_meds, req.body.status, req.body.diagnosed_date], 'Qo\'shildi', '/illnesses')); // POST: Tashxis qo'shish
-app.get('/illnesses/create', isAuth, roleCheck(['admin', 'clinician']), (req, res) => helper.render(res, 'illnesses/create', { title: 'Yangi', patients: queryAll('SELECT * FROM patients ORDER BY full_name'), doctors: queryAll('SELECT * FROM doctors ORDER BY full_name') })); // GET: Yaratish formasi
-app.route('/illnesses/:id') // Muayyan tashxis zanjiri
-  .post(isAuth, roleCheck(['admin', 'clinician']), (req, res) => helper.post(req, res, 'UPDATE illnesses SET patient_id=?, doctor_id=?, diagnosis=?, description=?, prescribed_meds=?, status=?, diagnosed_date=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [req.body.patient_id, req.body.doctor_id, req.body.diagnosis, req.body.description, req.body.prescribed_meds, req.body.status, req.body.diagnosed_date, req.params.id], 'Yangilandi', '/illnesses')); // POST: Tahrirlashni saqlash
-app.get('/illnesses/:id/edit', isAuth, roleCheck(['admin', 'clinician']), (req, res) => helper.render(res, 'illnesses/edit', { title: 'Tahrir', illness: queryOne('SELECT * FROM illnesses WHERE id=?', [req.params.id]), patients: queryAll('SELECT * FROM patients ORDER BY full_name'), doctors: queryAll('SELECT * FROM doctors ORDER BY full_name') })); // GET: Tahrir formasi
-app.post('/illnesses/:id/delete', isAuth, roleCheck(['admin']), (req, res) => helper.del(req, res, 'illnesses', '/illnesses')); // POST: O'chirish
+// POST: Login ma'lumotlarini tekshirish
+app.post('/login', (req, res) => {
+  const { username, password } = req.body; // Form dan username va parolni olish
 
-app.route('/users') // Foydalanuvchilar zanjiri (Faqat Admin)
-  .get(isAuth, roleCheck(['admin']), (req, res) => helper.render(res, 'users/index', { title: 'Foydalanuvchilar', users: queryAll('SELECT id, username, full_name, role, created_at FROM users ORDER BY created_at DESC') })) // GET: Ro'yxat
-  .post(isAuth, roleCheck(['admin']), (req, res) => queryOne('SELECT id FROM users WHERE username=?', [req.body.username]) ? helper.post(req, res, '', [], 'Username band', '/users/create') : helper.post(req, res, 'INSERT INTO users (username, password, full_name, role) VALUES (?,?,?,?)', [req.body.username, bcrypt.hashSync(req.body.password, 10), req.body.full_name, req.body.role], 'Yaratildi', '/users')); // POST: Yangi foydalanuvchi saqlash (bandligini tekshirish bilan)
-app.get('/users/create', isAuth, roleCheck(['admin']), (req, res) => helper.render(res, 'users/create', { title: 'Yangi' })); // GET: Yaratish formasi
-app.route('/users/:id') // Muayyan foydalanuvchi tahriri
-  .post(isAuth, roleCheck(['admin']), (req, res) => req.body.password ? helper.post(req, res, 'UPDATE users SET username=?, password=?, full_name=?, role=? WHERE id=?', [req.body.username, bcrypt.hashSync(req.body.password, 10), req.body.full_name, req.body.role, req.params.id], 'Yangilandi', '/users') : helper.post(req, res, 'UPDATE users SET username=?, full_name=?, role=? WHERE id=?', [req.body.username, req.body.full_name, req.body.role, req.params.id], 'Yangilandi', '/users')); // POST: Parol bor-yo'qligiga qarab yangilash
-app.get('/users/:id/edit', isAuth, roleCheck(['admin']), (req, res) => helper.render(res, 'users/edit', { title: 'Tahrir', editUser: queryOne('SELECT id, username, full_name, role FROM users WHERE id=?', [req.params.id]) })); // GET: Tahrir formasi
-app.post('/users/:id/delete', isAuth, roleCheck(['admin']), (req, res) => parseInt(req.params.id) === req.session.user.id ? helper.post(req, res, '', [], 'O\'zni o\'chirish taqiqlangan', '/users') : helper.del(req, res, 'users', '/users')); // POST: O'chirish
+  // Kiritilmagan maydonlarni tekshirish
+  if (!username || !password) {
+    req.session.error = 'Username va parol kiritilishi shart';
+    return res.redirect('/login');
+  }
 
-app.use((req, res) => res.status(404).render('error', { title: 'Xato', message: 'Sahifa yo\'q', user: req.session.user || null })); // 404 Barcha topilmagan sahifalar uchun handler
-getDb().then(() => app.listen(process.env.PORT || 3001, () => console.log(`\n🏥 MRMS ishlayapti: http://localhost:${process.env.PORT || 3001}`))); // Bazaga ulanib serverni ishga tushirish
+  const user = queryOne('SELECT * FROM users WHERE username=?', [username]); // Bazadan qidirish
+
+  // Foydalanuvchi topilmadi yoki parol noto'g'ri
+  if (!user || !bcrypt.compareSync(password, user.password)) {
+    req.session.error = 'Noto\'g\'ri username yoki parol';
+    return res.redirect('/login');
+  }
+
+  // Sessiyaga foydalanuvchi ma'lumotlarini yozish
+  req.session.user = {
+    id: user.id,
+    username: user.username,
+    full_name: user.full_name,
+    role: user.role
+  };
+
+  req.session.success = `Xush kelibsiz, ${user.full_name}!`; // Tabrik xabari
+  res.redirect('/dashboard'); // Boshqaruv paneliga yo'naltirish
+});
+
+// GET: Tizimdan chiqish
+app.get('/logout', (req, res) => {
+  req.session.destroy(); // Sessiyani to'liq tozalash
+  res.redirect('/login'); // Login sahifaga qaytarish
+});
+
+// ===== QR KOD API =====
+// Tashqi API: QR kod yaratish (Lecture talabi)
+app.get('/api/qrcode', async (req, res) => {
+  try {
+    const text = req.query.text || 'CareTrack Clinic'; // QR kodga yoziladigan matn
+    const qrData = await qr.toDataURL(text); // QR kodni Base64 formatiga aylantirish
+    res.json({ qr: qrData }); // JSON formatda qaytarish
+  } catch (err) {
+    res.status(500).json({ error: 'QR kod yaratishda xato' }); // Xato yuz berganda
+  }
+});
+
+// ===== BOSHQARUV PANELI (DASHBOARD) =====
+app.get('/dashboard', isAuth, async (req, res) => {
+  // Jadvallardan barcha ma'lumotlarni olish
+  const doctors = queryAll('SELECT * FROM doctors');
+  const patients = queryAll('SELECT * FROM patients');
+  const illnesses = queryAll('SELECT * FROM illnesses');
+
+  // Axios orqali tashqi API'dan sog'liq yangiliklari olish
+  let healthTips = [];
+  try {
+    const response = await axios.get('https://jsonplaceholder.typicode.com/posts?_limit=3');
+    healthTips = response.data.map(p => ({ title: p.title, body: p.body })); // .map array metodi
+  } catch (err) {
+    healthTips = [{ title: 'Sog\'lom turmush tarzi', body: 'Kuniga kamida 2 litr suv iching — bu organizmni tozalashga yordam beradi.' }];
+  }
+
+  // So'nggi tashxislar (JOIN orqali bemor va shifokor nomlari bilan)
+  const recentIllnesses = queryAll(
+    `SELECT i.*, p.full_name as patient_name, d.full_name as doctor_name
+     FROM illnesses i
+     JOIN patients p ON i.patient_id=p.id
+     JOIN doctors d ON i.doctor_id=d.id
+     ORDER BY i.created_at DESC LIMIT 5`
+  );
+
+  // Kasallik holati statistikasi (GROUP BY bilan)
+  const statusStats = queryAll('SELECT status, COUNT(*) as count FROM illnesses GROUP BY status');
+
+  // Bemorlar jinsi statistikasi
+  const genderStats = queryAll('SELECT gender, COUNT(*) as count FROM patients WHERE gender IS NOT NULL GROUP BY gender');
+
+  // Shifokorlar ish yuki (LEFT JOIN bilan)
+  const doctorWorkload = queryAll(
+    `SELECT d.full_name as doctor_name, COUNT(i.id) as patient_count
+     FROM doctors d LEFT JOIN illnesses i ON d.id=i.doctor_id
+     GROUP BY d.id`
+  );
+
+  // Bemorlar yosh guruhlari statistikasi (.filter va .map array metodlari)
+  const ages = patients
+    .filter(p => p.date_of_birth) // Faqat tug'ilgan sanasi borlarni tanlash
+    .map(p => new Date().getFullYear() - new Date(p.date_of_birth).getFullYear()); // Yoshlarni hisoblash
+  const ageStats = {
+    '0-18': ages.filter(a => a <= 18).length, // Bolalar
+    '19-35': ages.filter(a => a > 18 && a <= 35).length, // Yoshlar
+    '36-50': ages.filter(a => a > 35 && a <= 50).length, // O'rta yosh
+    '51+': ages.filter(a => a > 50).length // Kattalar
+  };
+
+  // Dashboard shabloniga barcha ma'lumotlarni uzatish
+  res.render('dashboard', {
+    title: 'Boshqaruv Paneli',
+    stats: {
+      doctors: doctors.length, // Shifokorlar soni
+      patients: patients.length, // Bemorlar soni
+      illnesses: illnesses.length, // Tashxislar soni
+      activeIllnesses: illnesses.filter(i => i.status === 'Faol').length // Faol kasalliklar
+    },
+    recentIllnesses, // So'nggi tashxislar
+    statusStats, // Holat statistikasi
+    genderStats, // Jins statistikasi
+    doctorWorkload, // Ish yuki
+    ageStats, // Yosh statistikasi
+    healthTips // Yangiliklar (Axios dan)
+  });
+});
+
+// ===== SHIFOKORLAR CRUD =====
+
+// GET: Shifokorlar ro'yxati
+app.get('/doctors', isAuth, (req, res) => {
+  const doctors = queryAll('SELECT * FROM doctors ORDER BY full_name'); // Barcha shifokorlar (tartibda)
+  helper.render(res, 'doctors/index', { title: 'Shifokorlar', doctors });
+});
+
+// GET: Yangi shifokor yaratish formasi
+app.get('/doctors/create', isAuth, roleCheck(['admin', 'clinician']), (req, res) => {
+  helper.render(res, 'doctors/create', { title: 'Yangi Shifokor' });
+});
+
+// POST: Yangi shifokorni bazaga saqlash
+app.post('/doctors', isAuth, roleCheck(['admin', 'clinician']), (req, res) => {
+  const { full_name, specialty, phone, email, experience_years, bio } = req.body; // Form ma'lumotlari
+
+  // Majburiy maydonlarni tekshirish
+  if (!full_name || !specialty) {
+    req.session.error = 'Ism va mutaxassislik kiritilishi shart';
+    return res.redirect('/doctors/create');
+  }
+
+  helper.redirect(req, res,
+    'INSERT INTO doctors (full_name, specialty, phone, email, experience_years, bio) VALUES (?,?,?,?,?,?)',
+    [full_name, specialty, phone || null, email || null, parseInt(experience_years) || 0, bio || null],
+    'Shifokor muvaffaqiyatli qo\'shildi', '/doctors'
+  );
+});
+
+// GET: Muayyan shifokor tafsilotlari (JOIN bilan)
+app.get('/doctors/:id', isAuth, (req, res) => {
+  const doctor = queryOne('SELECT * FROM doctors WHERE id=?', [req.params.id]); // Shifokorni topish
+
+  // Shifokor topilmadi — xato va ro'yxatga qaytish
+  if (!doctor) {
+    req.session.error = 'Shifokor topilmadi';
+    return res.redirect('/doctors');
+  }
+
+  // Shifokorga tegishli tashxislar (JOIN bilan bemor nomlari)
+  const illnesses = queryAll(
+    `SELECT i.*, p.full_name as patient_name
+     FROM illnesses i JOIN patients p ON i.patient_id=p.id
+     WHERE i.doctor_id=? ORDER BY i.diagnosed_date DESC`,
+    [req.params.id]
+  );
+
+  // Nechta noyob bemor borligini hisoblash
+  const result = queryOne('SELECT COUNT(DISTINCT patient_id) as count FROM illnesses WHERE doctor_id=?', [req.params.id]);
+  const patientCount = result ? result.count : 0; // Null himoyasi
+
+  helper.render(res, 'doctors/show', { title: doctor.full_name, doctor, illnesses, patientCount });
+});
+
+// GET: Shifokorni tahrirlash formasi
+app.get('/doctors/:id/edit', isAuth, roleCheck(['admin', 'clinician']), (req, res) => {
+  const doctor = queryOne('SELECT * FROM doctors WHERE id=?', [req.params.id]); // Shifokorni topish
+
+  if (!doctor) {
+    req.session.error = 'Shifokor topilmadi';
+    return res.redirect('/doctors');
+  }
+
+  helper.render(res, 'doctors/edit', { title: 'Shifokorni Tahrirlash', doctor });
+});
+
+// POST: Shifokor ma'lumotlarini yangilash
+app.post('/doctors/:id', isAuth, roleCheck(['admin', 'clinician']), (req, res) => {
+  const { full_name, specialty, phone, email, experience_years, bio } = req.body;
+
+  helper.redirect(req, res,
+    'UPDATE doctors SET full_name=?, specialty=?, phone=?, email=?, experience_years=?, bio=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
+    [full_name, specialty, phone || null, email || null, parseInt(experience_years) || 0, bio || null, req.params.id],
+    'Shifokor ma\'lumotlari yangilandi', `/doctors/${req.params.id}`
+  );
+});
+
+// POST: Shifokorni o'chirish (faqat admin)
+app.post('/doctors/:id/delete', isAuth, roleCheck(['admin']), (req, res) => {
+  helper.del(req, res, 'doctors', '/doctors');
+});
+
+// ===== BEMORLAR CRUD =====
+
+// GET: Bemorlar ro'yxati (LEFT JOIN bilan shifokor nomlari)
+app.get('/patients', isAuth, (req, res) => {
+  const patients = queryAll(
+    `SELECT p.*, d.full_name as doctor_name, d.specialty as doctor_specialty
+     FROM patients p LEFT JOIN doctors d ON p.doctor_id=d.id
+     ORDER BY p.full_name`
+  );
+  helper.render(res, 'patients/index', { title: 'Bemorlar', patients });
+});
+
+// GET: Yangi bemor yaratish formasi
+app.get('/patients/create', isAuth, (req, res) => {
+  const doctors = queryAll('SELECT id, full_name, specialty FROM doctors ORDER BY full_name');
+  helper.render(res, 'patients/create', { title: 'Yangi Bemor', doctors });
+});
+
+// POST: Yangi bemorni bazaga saqlash
+app.post('/patients', isAuth, (req, res) => {
+  const { full_name, date_of_birth, gender, phone, address, blood_type, emergency_contact, doctor_id } = req.body;
+
+  // Ism majburiy maydon
+  if (!full_name) {
+    req.session.error = 'Bemor ismi kiritilishi shart';
+    return res.redirect('/patients/create');
+  }
+
+  helper.redirect(req, res,
+    'INSERT INTO patients (full_name, date_of_birth, gender, phone, address, blood_type, emergency_contact, doctor_id) VALUES (?,?,?,?,?,?,?,?)',
+    [full_name, date_of_birth || null, gender || null, phone || null, address || null, blood_type || null, emergency_contact || null, doctor_id ? parseInt(doctor_id) : null],
+    'Bemor muvaffaqiyatli ro\'yxatga olindi', '/patients'
+  );
+});
+
+// GET: Muayyan bemor tafsilotlari (JOIN bilan)
+app.get('/patients/:id', isAuth, (req, res) => {
+  const patient = queryOne(
+    `SELECT p.*, d.full_name as doctor_name, d.specialty as doctor_specialty
+     FROM patients p LEFT JOIN doctors d ON p.doctor_id=d.id
+     WHERE p.id=?`,
+    [req.params.id]
+  );
+
+  // Bemor topilmadi
+  if (!patient) {
+    req.session.error = 'Bemor topilmadi';
+    return res.redirect('/patients');
+  }
+
+  // Bemorning barcha tashxislari (JOIN bilan shifokor nomlari)
+  const illnesses = queryAll(
+    `SELECT i.*, d.full_name as doctor_name, d.specialty as doctor_specialty
+     FROM illnesses i JOIN doctors d ON i.doctor_id=d.id
+     WHERE i.patient_id=? ORDER BY i.diagnosed_date DESC`,
+    [req.params.id]
+  );
+
+  helper.render(res, 'patients/show', { title: patient.full_name, patient, illnesses });
+});
+
+// GET: Bemorni tahrirlash formasi
+app.get('/patients/:id/edit', isAuth, roleCheck(['admin', 'clinician']), (req, res) => {
+  const patient = queryOne('SELECT * FROM patients WHERE id=?', [req.params.id]);
+
+  if (!patient) {
+    req.session.error = 'Bemor topilmadi';
+    return res.redirect('/patients');
+  }
+
+  const doctors = queryAll('SELECT id, full_name, specialty FROM doctors ORDER BY full_name');
+  helper.render(res, 'patients/edit', { title: 'Bemorni Tahrirlash', patient, doctors });
+});
+
+// POST: Bemor ma'lumotlarini yangilash
+app.post('/patients/:id', isAuth, roleCheck(['admin', 'clinician']), (req, res) => {
+  const { full_name, date_of_birth, gender, phone, address, blood_type, emergency_contact, doctor_id } = req.body;
+
+  helper.redirect(req, res,
+    'UPDATE patients SET full_name=?, date_of_birth=?, gender=?, phone=?, address=?, blood_type=?, emergency_contact=?, doctor_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
+    [full_name, date_of_birth || null, gender || null, phone || null, address || null, blood_type || null, emergency_contact || null, doctor_id ? parseInt(doctor_id) : null, req.params.id],
+    'Bemor ma\'lumotlari yangilandi', `/patients/${req.params.id}`
+  );
+});
+
+// POST: Bemorni o'chirish (faqat admin)
+app.post('/patients/:id/delete', isAuth, roleCheck(['admin']), (req, res) => {
+  helper.del(req, res, 'patients', '/patients');
+});
+
+// ===== TASHXISLAR (ILLNESSES) CRUD =====
+
+// GET: Tashxislar ro'yxati (JOIN bilan bemor va shifokor nomlari)
+app.get('/illnesses', isAuth, (req, res) => {
+  const illnesses = queryAll(
+    `SELECT i.*, p.full_name as patient_name, d.full_name as doctor_name, d.specialty as doctor_specialty
+     FROM illnesses i
+     JOIN patients p ON i.patient_id=p.id
+     JOIN doctors d ON i.doctor_id=d.id
+     ORDER BY i.diagnosed_date DESC`
+  );
+  helper.render(res, 'illnesses/index', { title: 'Kasalliklar / Tashxislar', illnesses });
+});
+
+// GET: Yangi tashxis yaratish formasi
+app.get('/illnesses/create', isAuth, roleCheck(['admin', 'clinician']), (req, res) => {
+  const patients = queryAll('SELECT id, full_name FROM patients ORDER BY full_name');
+  const doctors = queryAll('SELECT id, full_name, specialty FROM doctors ORDER BY full_name');
+  helper.render(res, 'illnesses/create', { title: 'Yangi Tashxis', patients, doctors });
+});
+
+// POST: Yangi tashxisni bazaga saqlash
+app.post('/illnesses', isAuth, roleCheck(['admin', 'clinician']), (req, res) => {
+  const { patient_id, doctor_id, diagnosis, description, prescribed_meds, status, diagnosed_date } = req.body;
+
+  // Majburiy maydonlarni tekshirish
+  if (!patient_id || !doctor_id || !diagnosis) {
+    req.session.error = 'Bemor, shifokor va tashxis kiritilishi shart';
+    return res.redirect('/illnesses/create');
+  }
+
+  helper.redirect(req, res,
+    'INSERT INTO illnesses (patient_id, doctor_id, diagnosis, description, prescribed_meds, status, diagnosed_date) VALUES (?,?,?,?,?,?,?)',
+    [parseInt(patient_id), parseInt(doctor_id), diagnosis, description || null, prescribed_meds || null, status || 'Faol', diagnosed_date || new Date().toISOString().split('T')[0]],
+    'Tashxis muvaffaqiyatli qo\'shildi', '/illnesses'
+  );
+});
+
+// GET: Tashxisni tahrirlash formasi
+app.get('/illnesses/:id/edit', isAuth, roleCheck(['admin', 'clinician']), (req, res) => {
+  const illness = queryOne('SELECT * FROM illnesses WHERE id=?', [req.params.id]);
+
+  if (!illness) {
+    req.session.error = 'Tashxis topilmadi';
+    return res.redirect('/illnesses');
+  }
+
+  const patients = queryAll('SELECT id, full_name FROM patients ORDER BY full_name');
+  const doctors = queryAll('SELECT id, full_name, specialty FROM doctors ORDER BY full_name');
+  helper.render(res, 'illnesses/edit', { title: 'Tashxisni Tahrirlash', illness, patients, doctors });
+});
+
+// POST: Tashxis ma'lumotlarini yangilash
+app.post('/illnesses/:id', isAuth, roleCheck(['admin', 'clinician']), (req, res) => {
+  const { patient_id, doctor_id, diagnosis, description, prescribed_meds, status, diagnosed_date } = req.body;
+
+  helper.redirect(req, res,
+    'UPDATE illnesses SET patient_id=?, doctor_id=?, diagnosis=?, description=?, prescribed_meds=?, status=?, diagnosed_date=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
+    [parseInt(patient_id), parseInt(doctor_id), diagnosis, description || null, prescribed_meds || null, status, diagnosed_date, req.params.id],
+    'Tashxis muvaffaqiyatli yangilandi', '/illnesses'
+  );
+});
+
+// POST: Tashxisni o'chirish (faqat admin)
+app.post('/illnesses/:id/delete', isAuth, roleCheck(['admin']), (req, res) => {
+  helper.del(req, res, 'illnesses', '/illnesses');
+});
+
+// ===== FOYDALANUVCHILAR CRUD (faqat Admin) =====
+
+// GET: Foydalanuvchilar ro'yxati
+app.get('/users', isAuth, roleCheck(['admin']), (req, res) => {
+  const users = queryAll('SELECT id, username, full_name, role, created_at FROM users ORDER BY created_at DESC');
+  helper.render(res, 'users/index', { title: 'Foydalanuvchilar', users });
+});
+
+// GET: Yangi foydalanuvchi yaratish formasi
+app.get('/users/create', isAuth, roleCheck(['admin']), (req, res) => {
+  helper.render(res, 'users/create', { title: 'Yangi Foydalanuvchi' });
+});
+
+// POST: Yangi foydalanuvchini bazaga saqlash
+app.post('/users', isAuth, roleCheck(['admin']), (req, res) => {
+  const { username, password, full_name, role } = req.body; // Form ma'lumotlari
+
+  // Majburiy maydonlarni tekshirish
+  if (!username || !password || !full_name || !role) {
+    req.session.error = 'Barcha maydonlar to\'ldirilishi shart';
+    return res.redirect('/users/create');
+  }
+
+  // Username bandligini tekshirish
+  const existing = queryOne('SELECT id FROM users WHERE username=?', [username]);
+  if (existing) {
+    req.session.error = 'Bu username allaqachon mavjud';
+    return res.redirect('/users/create');
+  }
+
+  // Parolni shifrlash va saqlash
+  const hashedPassword = bcrypt.hashSync(password, 10); // bcrypt bilan 10 salt round
+  helper.redirect(req, res,
+    'INSERT INTO users (username, password, full_name, role) VALUES (?,?,?,?)',
+    [username, hashedPassword, full_name, role],
+    'Foydalanuvchi muvaffaqiyatli yaratildi', '/users'
+  );
+});
+
+// GET: Foydalanuvchini tahrirlash formasi
+app.get('/users/:id/edit', isAuth, roleCheck(['admin']), (req, res) => {
+  const editUser = queryOne('SELECT id, username, full_name, role FROM users WHERE id=?', [req.params.id]);
+
+  if (!editUser) {
+    req.session.error = 'Foydalanuvchi topilmadi';
+    return res.redirect('/users');
+  }
+
+  helper.render(res, 'users/edit', { title: 'Foydalanuvchini Tahrirlash', editUser });
+});
+
+// POST: Foydalanuvchi ma'lumotlarini yangilash
+app.post('/users/:id', isAuth, roleCheck(['admin']), (req, res) => {
+  const { username, password, full_name, role } = req.body;
+
+  // Agar yangi parol kiritilgan bo'lsa — parolni ham yangilash
+  if (password && password.trim()) {
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    helper.redirect(req, res,
+      'UPDATE users SET username=?, password=?, full_name=?, role=? WHERE id=?',
+      [username, hashedPassword, full_name, role, req.params.id],
+      'Foydalanuvchi yangilandi', '/users'
+    );
+  } else {
+    // Parolsiz yangilash
+    helper.redirect(req, res,
+      'UPDATE users SET username=?, full_name=?, role=? WHERE id=?',
+      [username, full_name, role, req.params.id],
+      'Foydalanuvchi yangilandi', '/users'
+    );
+  }
+});
+
+// POST: Foydalanuvchini o'chirish (o'zini o'zini o'chirish taqiqlangan)
+app.post('/users/:id/delete', isAuth, roleCheck(['admin']), (req, res) => {
+  // O'zini o'zi o'chirish himoyasi
+  if (parseInt(req.params.id) === req.session.user.id) {
+    req.session.error = 'O\'zingizni o\'chira olmaysiz';
+    return res.redirect('/users');
+  }
+  helper.del(req, res, 'users', '/users');
+});
+
+// ===== 404 HANDLER =====
+// Barcha topilmagan sahifalar uchun xato sahifasini ko'rsatish
+app.use((req, res) => {
+  res.status(404).render('error', {
+    title: 'Sahifa topilmadi',
+    message: 'Siz qidirgan sahifa mavjud emas yoki o\'chirilgan'
+  });
+});
+
+// ===== SERVERNI ISHGA TUSHIRISH =====
+const PORT = process.env.PORT || 3001; // Port raqami
+getDb().then(() => {
+  app.listen(PORT, () => {
+    console.log(`\n🏥 CareTrack Clinic MRMS ishlayapti: http://localhost:${PORT}`);
+    console.log('📋 Admin login: admin / admin123\n');
+  });
+});

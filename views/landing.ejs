@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="/css/style.css">
   
   <!-- Tailwind Theme Configurations -->
-  <style type="text/theme">
+  <style type="text/tailwindcss">
     @theme {
       --color-gold-primary: var(--gold-primary);
       --color-gold-secondary: var(--gold-secondary);
@@ -65,7 +65,7 @@
           <button id="themeToggle" class="w-10 h-10 rounded-xl bg-bg-card border border-border-main hover:border-gold-primary/40 flex items-center justify-center text-lg hover:scale-105 active:scale-95 transition-all cursor-pointer" title="Mavzuni o'zgartirish">
             <i data-lucide="moon"></i>
           </button>
-          <a href="/login" class="px-6 py-2.5 bg-gradient-to-r from-gold-primary to-gold-secondary text-white dark:text-black font-bold rounded-xl shadow-md shadow-gold-primary/20 hover:shadow-lg hover:shadow-gold-primary/30 transition-all btn-premium text-sm flex items-center gap-2">
+          <a href="/login" class="px-6 py-2.5 bg-[var(--gold-primary)] font-bold rounded-xl shadow-md shadow-gold-primary/20 hover:shadow-lg hover:shadow-gold-primary/30 transition-all btn-premium text-sm flex items-center gap-2">
             <i data-lucide="lock" class="w-4 h-4"></i> Kirish
           </a>
         </div>
@@ -85,7 +85,7 @@
       </p>
       
       <div class="flex flex-col sm:flex-row justify-center gap-4">
-        <a href="/login" class="px-8 py-4 bg-gradient-to-r from-gold-primary to-gold-secondary text-white dark:text-black font-bold rounded-xl shadow-lg shadow-gold-primary/20 hover:shadow-xl hover:shadow-gold-primary/30 transition-all btn-premium text-lg flex items-center justify-center gap-2">
+        <a href="/login" class="px-8 py-4 bg-[var(--gold-primary)] font-bold rounded-xl shadow-lg shadow-gold-primary/20 hover:shadow-xl hover:shadow-gold-primary/30 transition-all btn-premium text-lg flex items-center justify-center gap-2">
           Boshlash <span class="text-xl"><i data-lucide="rocket" class="w-5 h-5"></i></span>
         </a>
         <a href="#features" class="px-8 py-4 bg-bg-card border-2 border-border-main hover:border-gold-primary/50 text-text-main font-bold rounded-xl hover:bg-bg-card-hover transition-all btn-premium text-lg flex items-center justify-center">
