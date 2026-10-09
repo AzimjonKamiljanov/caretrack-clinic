@@ -3,11 +3,12 @@
 // sql.js kutubxonasi yordamida SQLite baza boshqaruvi
 // ==========================================
 
-const initSqlJs = require('sql.js'); // SQL xotira bazasini yuklash (sql.js)
-const fs = require('fs'); // Fayllarni o'qish/yozish moduli
-const path = require('path'); // Fayl manzillarini ishlash moduli
-const DB_PATH = path.join(__dirname, 'caretrack.db'); // Baza faylining joylashuvi
-let db = null; // Global baza obyekti (xotirada saqlanadi)
+import initSqlJs from 'sql.js';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const DB_PATH = path.join(__dirname, '../../caretrack.db');
+let db: any = null;
 
 // ===== BAZANI ISHGA TUSHIRISH =====
 // Bazani yuklash yoki yangi yaratish va jadvallarni tekshirish
@@ -27,6 +28,20 @@ async function getDb() {
 
   // ===== JADVALLAR YARATISH =====
   const tables = [
+    // Appointments table
+    `CREATE TABLE IF NOT EXISTS appointments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      patient_id INTEGER NOT NULL,
+      doctor_id INTEGER NOT NULL,
+      appointment_date DATETIME NOT NULL,
+      status TEXT DEFAULT 'Scheduled' CHECK(status IN ('Scheduled', 'Completed', 'Cancelled')),
+      reason TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+      FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
+    )`,
+
     // Foydalanuvchilar jadvali (login, parol, rol)
     `CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,11 +113,11 @@ const saveDb = () => {
 
 // ===== BARCHA NATIJALARNI OLISH (SELECT) =====
 // SQL so'rovni bajarib, barcha mos qatorlarni massiv sifatida qaytarish
-const queryAll = (sql, params = []) => {
+const queryAll = (sql: string, params: any[] = []) => {
   if (!db) return []; // Baza tayyor emas bo'lsa — bo'sh massiv qaytarish
   const stmt = db.prepare(sql); // SQL so'rovni tayyorlash
   if (params.length) stmt.bind(params); // Parametrlarni ulash
-  const results = []; // Natijalar massivi
+  const results: any[] = []; // Natijalar massivi
   while (stmt.step()) results.push(stmt.getAsObject()); // Har bir qatorni obyektga aylantirish
   stmt.free(); // Xotirani tozalash
   return results; // Natijalarni qaytarish
@@ -110,13 +125,13 @@ const queryAll = (sql, params = []) => {
 
 // ===== BITTA NATIJANI OLISH =====
 // queryAll natijasining faqat birinchi elementini qaytarish (yoki null)
-const queryOne = (sql, params = []) => {
+const queryOne = (sql: string, params: any[] = []) => {
   return queryAll(sql, params)[0] || null;
 };
 
 // ===== INSERT/UPDATE/DELETE BAJARISH =====
 // Ma'lumotlarni o'zgartiruvchi SQL buyruqlarini bajarish va bazani saqlash
-const runSql = (sql, params = []) => {
+const runSql = (sql: string, params: any[] = []) => {
   if (!db) return { changes: 0 }; // Baza tayyor emas bo'lsa
   db.run(sql, params); // SQL buyruqni bajarish
   saveDb(); // O'zgarishlarni faylga saqlash
@@ -125,4 +140,4 @@ const runSql = (sql, params = []) => {
 
 // ===== EKSPORT =====
 // Boshqa fayllar (server.js, seed.js) foydalanishi uchun eksport
-module.exports = { getDb, queryAll, queryOne, runSql, saveDb };
+export { getDb, queryAll, queryOne, runSql, saveDb, db };

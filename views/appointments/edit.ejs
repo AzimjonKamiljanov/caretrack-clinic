@@ -1,0 +1,58 @@
+<%- include('../partials/header') %>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white border-0 pt-4 pb-0">
+                <h4 class="mb-0"><i class="fas fa-edit text-primary me-2"></i> Edit Appointment</h4>
+            </div>
+            <div class="card-body p-4">
+                <form action="/appointments/<%= appointment.id %>" method="POST">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Patient *</label>
+                            <select name="patient_id" class="form-select" required>
+                                <% patients.forEach(p => { %>
+                                    <option value="<%= p.id %>" <%= p.id === appointment.patient_id ? 'selected' : '' %>><%= p.full_name %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Doctor *</label>
+                            <select name="doctor_id" class="form-select" required>
+                                <% doctors.forEach(d => { %>
+                                    <option value="<%= d.id %>" <%= d.id === appointment.doctor_id ? 'selected' : '' %>><%= d.full_name %> (<%= d.specialty %>)</option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Date & Time *</label>
+                            <input type="datetime-local" name="appointment_date" class="form-control" value="<%= appointment.appointment_date %>" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="Scheduled" <%= appointment.status === 'Scheduled' ? 'selected' : '' %>>Scheduled</option>
+                                <option value="Completed" <%= appointment.status === 'Completed' ? 'selected' : '' %>>Completed</option>
+                                <option value="Cancelled" <%= appointment.status === 'Cancelled' ? 'selected' : '' %>>Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Reason</label>
+                            <textarea name="reason" class="form-control" rows="3"><%= appointment.reason %></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex justify-content-between">
+                        <a href="/appointments" class="btn btn-light">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="fas fa-save me-2"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>

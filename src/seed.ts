@@ -3,8 +3,8 @@
 // Bazaga test uchun boshlang'ich ma'lumot kiritish
 // ==========================================
 
-const { getDb, runSql, queryAll } = require('./database'); // Baza funksiyalarini yuklash
-const bcrypt = require('bcryptjs'); // Parolni shifrlash uchun kutubxona
+import { getDb, runSql, queryAll } from './config/database'; // Baza funksiyalarini yuklash
+import bcrypt from 'bcryptjs'; // Parolni shifrlash uchun kutubxona
 
 async function seed() { // Asinxron seed funksiyasi
   console.log('🌱 Ma\'lumotlar bazasiga namuna ma\'lumotlar kiritilmoqda...\n'); // Boshlash xabari
@@ -12,16 +12,17 @@ async function seed() { // Asinxron seed funksiyasi
   const db = await getDb(); // Bazani ishga tushirish (jadvallar yaratiladi)
 
   // ===== ESKI MA'LUMOTLARNI TOZALASH =====
+  runSql('DELETE FROM appointments');
   runSql('DELETE FROM illnesses'); // Barcha tashxislarni o'chirish
   runSql('DELETE FROM patients'); // Barcha bemorlarni o'chirish
   runSql('DELETE FROM doctors'); // Barcha shifokorlarni o'chirish
   runSql('DELETE FROM users'); // Barcha foydalanuvchilarni o'chirish
   try { // Auto-increment raqamlarni qayta boshlash
-    runSql("DELETE FROM sqlite_sequence WHERE name IN ('users', 'doctors', 'patients', 'illnesses')");
+    runSql("DELETE FROM sqlite_sequence WHERE name IN ('users', 'doctors', 'patients', 'illnesses', 'appointments')");
   } catch (e) {} // Xatolik bo'lsa e'tiborsiz qoldirish (birinchi ishga tushirishda)
 
   // ===== FOYDALANUVCHILAR (3 ta rol) =====
-  const hash = (pwd) => bcrypt.hashSync(pwd, 10); // Parolni shifrlash funksiyasi
+  const hash = (pwd: string) => bcrypt.hashSync(pwd, 10); // Parolni shifrlash funksiyasi
 
   const users = [ // [username, parol_hash, to'liq_ism, rol]
     ['admin', hash('admin123'), 'Abdullayev Jasur', 'admin'], // Administrator
@@ -30,7 +31,7 @@ async function seed() { // Asinxron seed funksiyasi
     ['reception1', hash('recep123'), 'Toshmatova Dilfuza', 'receptionist'], // Qabulxona xodimi
   ];
 
-  users.forEach(u => { // Har bir foydalanuvchini bazaga kiritish
+  users.forEach((u: any) => { // Har bir foydalanuvchini bazaga kiritish
     runSql('INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)', u);
   });
   console.log(`✅ ${users.length} ta foydalanuvchi qo'shildi`); // Natija xabari
@@ -45,7 +46,7 @@ async function seed() { // Asinxron seed funksiyasi
     ['Dr. Yusupova Gavhar', 'Dermatolog', '+998901234572', 'yusupova@caretrack.uz', 7, 'Teri kasalliklari bo\'yicha mutaxassis.'],
   ];
 
-  doctors.forEach(d => { // Har bir shifokorni bazaga kiritish
+  doctors.forEach((d: any) => { // Har bir shifokorni bazaga kiritish
     runSql('INSERT INTO doctors (full_name, specialty, phone, email, experience_years, bio) VALUES (?, ?, ?, ?, ?, ?)', d);
   });
   console.log(`✅ ${doctors.length} ta shifokor qo'shildi`); // Natija xabari
@@ -62,7 +63,7 @@ async function seed() { // Asinxron seed funksiyasi
     ['Yusupova Kamola', '1998-04-18', 'Ayol', '+998938889900', 'Toshkent, Sergeli tumani', 'A+', '+998938889901', 4],
   ];
 
-  patients.forEach(p => { // Har bir bemorni bazaga kiritish
+  patients.forEach((p: any) => { // Har bir bemorni bazaga kiritish
     runSql('INSERT INTO patients (full_name, date_of_birth, gender, phone, address, blood_type, emergency_contact, doctor_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', p);
   });
   console.log(`✅ ${patients.length} ta bemor qo'shildi`); // Natija xabari
@@ -81,10 +82,22 @@ async function seed() { // Asinxron seed funksiyasi
     [8, 4, 'ORVI', 'Burun bitishi, yo\'tal, umumiy holsizlik', 'Paracetamol, burun tomchilari', 'Faol', '2026-05-20'],
   ];
 
-  illnesses.forEach(i => { // Har bir tashxisni bazaga kiritish
+  illnesses.forEach((i: any) => { // Har bir tashxisni bazaga kiritish
     runSql('INSERT INTO illnesses (patient_id, doctor_id, diagnosis, description, prescribed_meds, status, diagnosed_date) VALUES (?, ?, ?, ?, ?, ?, ?)', i);
   });
   console.log(`✅ ${illnesses.length} ta kasallik/tashxis qo'shildi`); // Natija xabari
+
+  // ===== APPOINTMENTS =====
+  const appointments: any[] = [
+    [1, 1, '2026-06-15 10:00:00', 'Scheduled', 'Regular checkup'],
+    [2, 2, '2026-06-16 11:30:00', 'Completed', 'Follow up on blood pressure'],
+    [3, 3, '2026-06-17 14:00:00', 'Cancelled', 'Patient requested reschedule']
+  ];
+
+  appointments.forEach(a => {
+    runSql('INSERT INTO appointments (patient_id, doctor_id, appointment_date, status, reason) VALUES (?, ?, ?, ?, ?)', a);
+  });
+  console.log(`✅ ${appointments.length} ta appointment qo'shildi`);
 
   // ===== YAKUNIY XABAR =====
   console.log('\n🎉 Barcha namuna ma\'lumotlar muvaffaqiyatli kiritildi!'); // Muvaffaqiyat xabari
