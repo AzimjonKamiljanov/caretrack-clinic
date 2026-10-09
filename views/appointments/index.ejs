@@ -1,0 +1,72 @@
+<%- include('../partials/header') %>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-calendar-alt text-primary"></i> Appointments</h2>
+    <% if(user && (user.role === 'admin' || user.role === 'receptionist')) { %>
+    <a href="/appointments/create" class="btn btn-primary">
+        <i class="fas fa-plus"></i> New Appointment
+    </a>
+    <% } %>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Patient</th>
+                        <th>Doctor</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Reason</th>
+                        <% if(user && (user.role === 'admin' || user.role === 'receptionist')) { %>
+                        <th class="text-end">Actions</th>
+                        <% } %>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if(appointments.length > 0) { %>
+                        <% appointments.forEach(app => { %>
+                            <tr>
+                                <td><%= app.patient_name %></td>
+                                <td><%= app.doctor_name %></td>
+                                <td><%= new Date(app.appointment_date).toLocaleString() %></td>
+                                <td>
+                                    <% if(app.status === 'Scheduled') { %>
+                                        <span class="badge bg-primary">Scheduled</span>
+                                    <% } else if(app.status === 'Completed') { %>
+                                        <span class="badge bg-success">Completed</span>
+                                    <% } else { %>
+                                        <span class="badge bg-danger">Cancelled</span>
+                                    <% } %>
+                                </td>
+                                <td><%= app.reason || '-' %></td>
+                                <% if(user && (user.role === 'admin' || user.role === 'receptionist')) { %>
+                                <td class="text-end">
+                                    <a href="/appointments/<%= app.id %>/edit" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <% if(user.role === 'admin') { %>
+                                    <form action="/appointments/<%= app.id %>/delete" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this appointment?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                    <% } %>
+                                </td>
+                                <% } %>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">No appointments found.</td>
+                        </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<%- include('../partials/footer') %>
